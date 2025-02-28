@@ -19,7 +19,7 @@ public class Tests {
      */
     public static void main(String[] args) {
 
-        String tableName = "title_ratings";
+        String tableName = "title_principals";
         String jdbcUrl1 = "jdbc:postgresql://localhost:5432/imdb";
         String username1 = "postgres";
         String password1 = "psqlpass";
@@ -281,7 +281,7 @@ public class Tests {
                 String columnName = columns.getString("COLUMN_NAME");
                 String dataType = columns.getString("TYPE_NAME");
 
-                // Vérifier si la colonne est alphanumérique (char, varchar, text)
+                // Vérifier si la colonne est alphanumérique
                 if (dataType.matches("(?i)char.*|varchar.*|text")) {
                     String columnNum = columnName + "_num";
 
@@ -308,12 +308,9 @@ public class Tests {
                     "        FROM information_schema.columns \n" +
                     "        WHERE table_name = '" + nomtable + "'\n" +
                     "        AND column_name NOT LIKE '%_num'\n" +
-                    "        AND data_type LIKE 'char%'\n" + // S'assurer que c'est du char, varchar ou text
+                    "        AND data_type LIKE 'text%'\n" +
                     "    LOOP\n" +
-                    "        -- Mettre à jour la colonne _num uniquement si la colonne d'origine n'est pas NULL\n" +
-                    "        EXECUTE 'UPDATE " + nomtable + " SET ' || quote_ident(column_record.column_name) || '_num = ' || \n" +
-                    "            'hashtext(' || quote_ident(column_record.column_name) || ') ' || \n" +
-                    "            'WHERE ' || quote_ident(column_record.column_name) || ' IS NOT NULL;';\n" +
+                    "        EXECUTE 'UPDATE " + nomtable + " SET ' || quote_ident(column_record.column_name) || '_num = hashtext(' || quote_ident(column_record.column_name) || ');';\n" +
                     "    END LOOP;\n" +
                     "END $$;";
 
@@ -325,8 +322,6 @@ public class Tests {
             throw e;
         }
     }
-
-
 
 
 }
