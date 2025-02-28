@@ -19,7 +19,7 @@ public class Tests {
      */
     public static void main(String[] args) {
 
-        String tableName = "t_s_structure_new22";
+        String tableName = "title_crew";
         String jdbcUrl1 = "jdbc:postgresql://localhost:5432/imdb";
         String username1 = "postgres";
         String password1 = "psqlpass";
@@ -28,17 +28,17 @@ public class Tests {
 
         try {
             Connection connection = DriverManager.getConnection(jdbcUrl1, username1, password1);
-            String[] tokens = getColumnNames1(connection, "title_crew");
-            System.out.println(tokens[1]);
-            System.out.println("Starting ....\n");
-            int count = 3;
-            Combiner<String> combiner = new Combiner<String>(count, tokens);
-            String[] result = new String[count];
-            System.out.println("Starting 2 ....\n");
-            System.out.println("Result ...." + result[0]);
+//            String[] tokens = getColumnNames1(connection,"title_crew" );//recupere le nb de colonnes de type integer
+//            System.out.println(tokens[1]);
+//            System.out.println("Starting ....\n");
+//            int count = 3;
+//            Combiner<String> combiner = new Combiner<String>(count, tokens);
+//            String[] result = new String[count];
+//            System.out.println("Starting 2 ....\n");
+//            System.out.println("Result ...." + result[0]);
 
-            alterTableAddNumFields(connection);
-            System.out.println(getColumnNames1(connection, "title_akas"));
+            alterTableAddNumFields(connection,"title_crew");
+            //System.out.println(getColumnNames1(connection, "title_episode"));
             //testcall1(connection,"t_s_structure_new22","age","prenom_num");
 
 //            while (combiner.searchNext(result)) {
@@ -264,27 +264,36 @@ public class Tests {
     }
 
     /**
-     * Modifie la table t_s_structure_new22 pour ajouter des colonnes numériques
-     * basées sur les colonnes existantes.
+     * Modifie la table spécifiée pour ajouter des colonnes numériques (_num)
+     * basées sur les colonnes alphanumériques existantes et les remplir avec hashtext().
      *
      * @param connection Connexion à la base de données
+     * @param nomtable Nom de la table à modifier
      * @throws SQLException Si une erreur SQL survient
      */
-    private static void alterTableAddNumFields(Connection connection) throws SQLException {
+    private static void alterTableAddNumFields(Connection connection, String nomtable) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             DatabaseMetaData metadata = connection.getMetaData();
-            ResultSet columns = metadata.getColumns(null, null, "t_s_structure_new22", null);
+            ResultSet columns = metadata.getColumns(null, null, nomtable, null);
 
+            // Vérifier les colonnes existantes et ajouter les colonnes _num si nécessaire
             while (columns.next()) {
                 String columnName = columns.getString("COLUMN_NAME");
                 String dataType = columns.getString("TYPE_NAME");
 
-                // Vérifier si la colonne n'est pas numérique
+                // Vérifier si la colonne est alphanumérique
                 if (dataType.matches("(?i)char.*|varchar.*|text")) {
-                    // Ajouter la colonne _num
-                    String alterStatement = "ALTER TABLE t_s_structure_new22 ADD COLUMN IF NOT EXISTS " + columnName + "_num INTEGER;\n";
-                    statement.executeUpdate(alterStatement);
-                    System.out.println("Ajout de la colonne : " + columnName + "_num");
+                    String columnNum = columnName + "_num";
+
+                    // Vérifier si la colonne _num existe déjà
+                    ResultSet numColumnCheck = metadata.getColumns(null, null, nomtable, columnNum);
+                    if (!numColumnCheck.next()) {
+                        // Ajouter la colonne _num si elle n'existe pas
+                        String alterStatement = "ALTER TABLE " + nomtable + " ADD COLUMN " + columnNum + " INTEGER;";
+                        statement.executeUpdate(alterStatement);
+                        System.out.println("Ajout de la colonne : " + columnNum);
+                    }
+                    numColumnCheck.close();
                 }
             }
             columns.close();
@@ -292,22 +301,16 @@ public class Tests {
             // Script PL/pgSQL pour mettre à jour les colonnes _num avec hashtext()
             String hashUpdateScript = "DO $$ \n" +
                     "DECLARE \n" +
-                    "    p_table_name TEXT := 't_s_structure_new22';\n" +
-                    "    column_sql TEXT;\n" +
-                    "    column_sql_num TEXT;\n" +
-                    "    update_sql TEXT;\n" +
                     "    column_record RECORD;\n" +
                     "BEGIN\n" +
                     "    FOR column_record IN \n" +
                     "        SELECT column_name \n" +
                     "        FROM information_schema.columns \n" +
-                    "        WHERE table_name = p_table_name AND column_name NOT LIKE '%_num'\n" +
+                    "        WHERE table_name = '" + nomtable + "'\n" +
+                    "        AND column_name NOT LIKE '%_num'\n" +
                     "        AND data_type LIKE 'text%'\n" +
                     "    LOOP\n" +
-                    "        column_sql := quote_ident(column_record.column_name);\n" +
-                    "        column_sql_num := column_sql || '_num';\n" +
-                    "        update_sql := 'UPDATE ' || p_table_name || ' SET ' || column_sql_num || ' = hashtext(' || column_sql || ');';\n" +
-                    "        EXECUTE update_sql;\n" +
+                    "        EXECUTE 'UPDATE " + nomtable + " SET ' || quote_ident(column_record.column_name) || '_num = hashtext(' || quote_ident(column_record.column_name) || ');';\n" +
                     "    END LOOP;\n" +
                     "END $$;";
 
