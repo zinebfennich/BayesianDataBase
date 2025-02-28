@@ -19,7 +19,7 @@ public class Tests {
      */
     public static void main(String[] args) {
 
-        String tableName = "title_basics";
+        String tableName = "title_ratings";
         String jdbcUrl1 = "jdbc:postgresql://localhost:5432/imdb";
         String username1 = "postgres";
         String password1 = "psqlpass";
@@ -37,7 +37,7 @@ public class Tests {
 //            System.out.println("Starting 2 ....\n");
 //            System.out.println("Result ...." + result[0]);
 
-            alterTableAddNumFields(connection,"title_basics");
+            alterTableAddNumFields(connection,"films");
             //System.out.println(getColumnNames1(connection, "title_episode"));
             //testcall1(connection,"t_s_structure_new22","age","prenom_num");
 
@@ -281,7 +281,7 @@ public class Tests {
                 String columnName = columns.getString("COLUMN_NAME");
                 String dataType = columns.getString("TYPE_NAME");
 
-                // Vérifier si la colonne est alphanumérique
+                // Vérifier si la colonne est alphanumérique (char, varchar, text)
                 if (dataType.matches("(?i)char.*|varchar.*|text")) {
                     String columnNum = columnName + "_num";
 
@@ -308,9 +308,12 @@ public class Tests {
                     "        FROM information_schema.columns \n" +
                     "        WHERE table_name = '" + nomtable + "'\n" +
                     "        AND column_name NOT LIKE '%_num'\n" +
-                    "        AND data_type LIKE 'text%'\n" +
+                    "        AND data_type LIKE 'char%'\n" + // S'assurer que c'est du char, varchar ou text
                     "    LOOP\n" +
-                    "        EXECUTE 'UPDATE " + nomtable + " SET ' || quote_ident(column_record.column_name) || '_num = hashtext(' || quote_ident(column_record.column_name) || ');';\n" +
+                    "        -- Mettre à jour la colonne _num uniquement si la colonne d'origine n'est pas NULL\n" +
+                    "        EXECUTE 'UPDATE " + nomtable + " SET ' || quote_ident(column_record.column_name) || '_num = ' || \n" +
+                    "            'hashtext(' || quote_ident(column_record.column_name) || ') ' || \n" +
+                    "            'WHERE ' || quote_ident(column_record.column_name) || ' IS NOT NULL;';\n" +
                     "    END LOOP;\n" +
                     "END $$;";
 
@@ -322,6 +325,8 @@ public class Tests {
             throw e;
         }
     }
+
+
 
 
 }
