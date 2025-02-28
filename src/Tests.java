@@ -353,6 +353,5 @@ public class Tests {
         }
     }
 
-    public static void combiner2colonnes
 
 }
