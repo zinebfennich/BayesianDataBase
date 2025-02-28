@@ -19,7 +19,7 @@ public class Tests {
      */
     public static void main(String[] args) {
 
-        String tableName = "title_principals";
+        //String tableName = "title_principals";
         String jdbcUrl1 = "jdbc:postgresql://localhost:5432/imdb";
         String username1 = "postgres";
         String password1 = "psqlpass";
@@ -28,18 +28,46 @@ public class Tests {
 
         try {
             Connection connection = DriverManager.getConnection(jdbcUrl1, username1, password1);
-//            String[] tokens = getColumnNames1(connection,"title_crew" );//recupere le nb de colonnes de type integer
-//            System.out.println(tokens[1]);
-//            System.out.println("Starting ....\n");
+//            String[] tokens = getColumnNames1(connection,"title_crew" );//retourne les noms des colonnes numériques sous forme de tableau de chaînes
+//            //System.out.println(tokens[1]);
+//            //System.out.println("Starting ....\n");
 //            int count = 3;
 //            Combiner<String> combiner = new Combiner<String>(count, tokens);
 //            String[] result = new String[count];
-//            System.out.println("Starting 2 ....\n");
-//            System.out.println("Result ...." + result[0]);
+//            //System.out.println("Starting 2 ....\n");
+//            //System.out.println("Result ...." + result[0]);
 
+            //test pour hasher les colonnes _num
             alterTableAddNumFields(connection,"films");
-            //System.out.println(getColumnNames1(connection, "title_episode"));
-            //testcall1(connection,"t_s_structure_new22","age","prenom_num");
+
+            //test pour générer les combinaisons de colonnes et les passer à testCall1 qui les insere dans t_edges et calcule les corrélations
+            // Supposons que vous avez déjà une méthode pour récupérer les colonnes depuis la base de données.
+            String[] colonnes = getColumnNames1(connection, "films");
+
+            // Créez une instance de Combiner pour générer toutes les paires de colonnes (2 éléments par combinaison)
+            Combiner<String> combiner = new Combiner<>(2, colonnes);
+
+            // Tableau pour stocker la combinaison actuelle (chaque paire de nœuds)
+            String[] paire = new String[2];
+
+            // Tant qu'il y a une nouvelle combinaison (paires de colonnes)
+            while (combiner.searchNext(paire)) {
+                String colonne1 = paire[0];  // Premier élément de la paire (colonne 1)
+                String colonne2 = paire[1];  // Deuxième élément de la paire (colonne 2)
+
+                // Nom de la table dans laquelle vous insérez les données
+                String tableName = "films";  // Vous pouvez adapter le nom de la table ici selon vos besoins.
+
+                // Appeler la méthode testcall1 pour insérer la paire de colonnes et calculer la corrélation
+                try {
+                    testcall1(connection, tableName, colonne1, colonne2);
+                } catch (SQLException e) {
+                    e.printStackTrace();  // Gérer les erreurs SQL
+                }
+            }
+
+
+
 
 //            while (combiner.searchNext(result)) {
 //                System.out.println("Starting 3 ....\n");
@@ -140,8 +168,8 @@ public class Tests {
      */
     public static class Combiner<T> {
 
-        protected int count;
-        protected T[] array;
+        protected int count; // le nombre d'éléments qu'on veut dans chaque combinaison (2,3..)
+        protected T[] array; //  le tableau d'éléments à combiner (ici on utiliser les noms de colonnes
         protected int[] indexes;
 
         public Combiner(int count, T[] array) {
@@ -181,7 +209,9 @@ public class Tests {
     }
 
     /**
-     * Insère des données dans la table T_edges.
+     * La méthode testcall1 fait deux choses :
+     * Insertion des 2 variables dans la table T_edges.
+     * Appel de la procédure stockée p_corr_postgres pour calculer les corrélations.
      *
      * @param connection Connexion à la base de données
      * @param tableName  Nom de la table source
@@ -323,5 +353,6 @@ public class Tests {
         }
     }
 
+    public static void combiner2colonnes
 
 }
