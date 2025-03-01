@@ -3,10 +3,7 @@ import java.sql.*;
 import java.util.Arrays;
 
 /**
- * Classe principale pour tester des opérations sur une base de données
- * PostgreSQL.
- * Permet de récupérer des noms de colonnes et d'insérer des données dans
- * différentes tables.
+ * Fichier temporaire
  */
 public class Tests {
 

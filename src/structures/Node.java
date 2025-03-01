@@ -4,28 +4,47 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Node {
-    private String name;  // Nom de la colonne (variable)
-    private List<Node> neighbors;
+    private String name; //nom de la colonne/variable
+    private List<Node> descendants; // Liste des descendants (noeuds vers lesquels il y a un lien sortant)
 
     public Node(String name) {
         this.name = name;
-        this.neighbors = new ArrayList<>();
+        this.descendants = new ArrayList<>();
     }
 
     public String getName() {
         return name;
     }
 
-    public void addlink(Node node2) {
-        this.neighbors.add(node2);
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public void removelink(Node node2) {
-        this.neighbors.add(node2);
+    /**
+     * Ajoute un lien unidirectionnel du noeud actuel vers un descendant (A → B).
+     * @param node2 Le noeud descendant.
+     */
+    public void addLink(Node node2) {
+        // noeud1 -> noeud2
+        if (!descendants.contains(node2)) {
+            this.descendants.add(node2);
+        }
     }
 
-    public List<Node> getNeighbors() {
-        return neighbors;
+    /**
+     * Retire un lien unidirectionnel du noeud actuel vers un descendant (A → B).
+     * @param node2 Le noeud descendant dont le lien doit être retiré.
+     */
+    public void removeLink(Node node2) {
+        //suppression du lien noeud1 -> noeud2
+        descendants.remove(node2);
     }
+
+    public List<Node> getDescendants() {
+        return descendants;
+    }
+
+
 }
+
 

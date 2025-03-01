@@ -1,9 +1,6 @@
 package database;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 /**
  * Cette classe est dédiée à des opérations sur les colonnes des tables.
@@ -61,4 +58,92 @@ public class ColumUtils {
         }
         return columnNames;
     }
+
+    /**
+     * Vérifie si une colonne existe dans la table spécifiée.
+     * @param connection La connexion à la base de données
+     * @param nomtable Le nom de la table
+     * @param columnName Le nom de la colonne à vérifier
+     * @return true si la colonne existe, false sinon
+     * @throws SQLException Si une erreur SQL survient
+     */
+    public static boolean columnExists(Connection connection, String nomtable, String columnName) throws SQLException {
+        DatabaseMetaData metadata = connection.getMetaData();
+        try (ResultSet columnCheck = metadata.getColumns(null, null, nomtable, columnName)) {
+            return columnCheck.next();
+        }
+    }
+
+    /**
+     * Ajoute une colonne à une table spécifiée.
+     * @param connection La connexion à la base de données
+     * @param nomtable Le nom de la table
+     * @param columnName Le nom de la colonne à ajouter
+     * @param columnType Le type de la colonne à ajouter (par exemple INTEGER)
+     * @throws SQLException Si une erreur SQL survient
+     */
+    public static void addColumn(Connection connection, String nomtable, String columnName, String columnType) throws SQLException {
+        String alterStatement = "ALTER TABLE " + nomtable + " ADD COLUMN " + columnName + " " + columnType + ";";
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate(alterStatement);
+            System.out.println("Ajout de la colonne : " + columnName);
+        }
+    }
+
+    /**
+     * Renomme une colonne d'une table.
+     * @param connection La connexion à la base de données
+     * @param nomtable Le nom de la table
+     * @param oldColumnName Le nom actuel de la colonne
+     * @param newColumnName Le nouveau nom de la colonne
+     * @throws SQLException Si une erreur SQL survient
+     */
+    public static void renameColumn(Connection connection, String nomtable, String oldColumnName, String newColumnName) throws SQLException {
+        String renameStatement = "ALTER TABLE " + nomtable + " RENAME COLUMN " + oldColumnName + " TO " + newColumnName + ";";
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate(renameStatement);
+            System.out.println("Renommage de la colonne : " + oldColumnName + " en " + newColumnName);
+        }
+    }
+
+    /**
+     * Supprime une colonne d'une table spécifiée.
+     * @param connection La connexion à la base de données
+     * @param nomtable Le nom de la table
+     * @param columnName Le nom de la colonne à supprimer
+     * @throws SQLException Si une erreur SQL survient
+     */
+    public static void dropColumn(Connection connection, String nomtable, String columnName) throws SQLException {
+        String dropStatement = "ALTER TABLE " + nomtable + " DROP COLUMN " + columnName + ";";
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate(dropStatement);
+            System.out.println("Suppression de la colonne : " + columnName);
+        }
+    }
+
+    public static void addNumColumnsIfNeeded(Connection connection, String nomtable) throws SQLException {
+        DatabaseMetaData metadata = connection.getMetaData();
+        try (Statement statement = connection.createStatement();
+             ResultSet columns = metadata.getColumns(null, null, nomtable, null)) {
+
+            while (columns.next()) {
+                String columnName = columns.getString("COLUMN_NAME");
+                String dataType = columns.getString("TYPE_NAME");
+
+                // Vérifier si la colonne est alphanumérique
+                if (dataType.matches("(?i)char.*|varchar.*|text")) {
+                    String columnNum = columnName + "_num";
+
+                    if (!columnExists(connection, nomtable, columnNum)) {
+                        // Ajouter la colonne _num si elle n'existe pas
+                        addColumn(connection, nomtable, columnNum, "INTEGER");
+                    }
+                }
+            }
+        }
+    }
+
+
+
+
 }
