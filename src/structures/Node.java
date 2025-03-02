@@ -44,6 +44,10 @@ public class Node {
         return descendants;
     }
 
+    public boolean isNumeric() {
+        return !name.endsWith("_num");
+    }
+
 
 }
 

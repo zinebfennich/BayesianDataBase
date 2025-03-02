@@ -109,18 +109,54 @@ public class DatabaseUtils {
      * @param column3    Nom de la troisième colonne
      * @throws SQLException Si une erreur SQL survient
      */
-    public static void testcall2(Connection connection, String tableName, String column1, String column2,
-                                 String column3) throws SQLException {
+    public static void testcall2(Connection connection, String tableName, String column1, String column2, String column3) throws SQLException {
+        // Récupérer les corrélations simples de t_edges
+        Double r_yi_xj = getCorrelation(connection, tableName, column1, column2);
+        Double r_yi_xk = getCorrelation(connection, tableName, column1, column3);
+        Double r_xj_xk = getCorrelation(connection, tableName, column2, column3);
 
-        String sql = "INSERT INTO T_edges_2 (sname, node1, node2, node3,corr_part) VALUES (?, ?, ?, ?,?)";
-        CallableStatement statement = connection.prepareCall(sql);
-        statement.setString(1, tableName);
-        statement.setString(2, column1);
-        statement.setString(3, column2);
-        statement.setString(4, column3);
-        statement.setInt(5, 0);
-        statement.executeUpdate();
+        Double corrPartielle = null;
+
+        // Vérifier que les valeurs ne sont pas null pour éviter une erreur de calcul
+        if (r_yi_xj != null && r_yi_xk != null && r_xj_xk != null) {
+            // Appliquer la formule de la corrélation partielle
+            double denominator = Math.sqrt((1 - r_yi_xk * r_yi_xk) * (1 - r_xj_xk * r_xj_xk));
+            if (denominator != 0) { // Vérifier qu'on ne divise pas par zéro
+                corrPartielle = (r_yi_xj - r_yi_xk * r_xj_xk) / denominator;
+            } else {
+                corrPartielle = 0.0; // Éviter NaN en cas de division par zéro
+            }
+        } else {
+            corrPartielle = 0.0; // Si une des corrélations est manquante, on met 0
+        }
+
+        // Insérer la corrélation partielle dans t_edges_2
+        String sql = "INSERT INTO t_edges_2 (sname, node1, node2, node3, corr_part) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, tableName);
+            statement.setString(2, column1);
+            statement.setString(3, column2);
+            statement.setString(4, column3);
+            statement.setDouble(5, corrPartielle); // Insérer la vraie valeur calculée
+            statement.executeUpdate();
+        }
     }
+
+    private static Double getCorrelation(Connection connection, String tableName, String node1, String node2) throws SQLException {
+        String query = "SELECT corr FROM t_edges WHERE node1 = ? AND node2 = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setString(1, node1);
+            statement.setString(2, node2);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getDouble("corr");
+                }
+            }
+        }
+        return null; // Si la corrélation n'est pas trouvée, on retourne null
+    }
+
 
     /**
      * Insère des données dans la table T_edges_ci1.
