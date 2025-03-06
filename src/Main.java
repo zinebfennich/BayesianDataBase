@@ -15,7 +15,7 @@ public class Main {
         String url = "jdbc:postgresql://localhost:5432/imdb";
         String user = "postgres";
         String password = "psqlpass";
-        String tableName = "title_ratings"; // Nom de la table à tester
+        String tableName = "films_details"; // Nom de la table à tester
 
         try (Connection connection = DriverManager.getConnection(url, user, password);
              Statement statement = connection.createStatement()) {
