@@ -38,7 +38,7 @@ public class PCAlgorithm {
         while (combiner.searchNext(paire)) {
             Node node1 = paire[0];  // Premier noeud de la paire
             Node node2 = paire[1];  // Deuxième noeud de la paire
-
+            
             String colonne1 = node1.getName();  // Récupérer le nom de la colonne du noeud 1
             String colonne2 = node2.getName();  // Récupérer le nom de la colonne du noeud 2
 
@@ -52,41 +52,39 @@ public class PCAlgorithm {
 
         //3) pour chaque ligne dans t-edges , si correlation =0 alors suppression du lien entre les noeuds
         try {
-            String query = "SELECT node1, node2, corr FROM t_edges";
+            String query = "SELECT node1, node2, corr, correlation_exists FROM t_edges";
             try (var statement = connection.createStatement();
                  var resultSet = statement.executeQuery(query)) {
 
                 while (resultSet.next()) {
                     String node1Name = resultSet.getString("node1");
                     String node2Name = resultSet.getString("node2");
-                    Double correlation = resultSet.getObject("corr", Double.class); // attention peut être null
+                    Boolean correlationExists = resultSet.getBoolean("correlation_exists");
 
-                    // Vérifier si la corrélation est nulle ou égale à 0
-                    if (correlation != null && correlation == 0.0) {
+                    if (!correlationExists) {
+                        System.out.println("Suppression du lien entre " + node1Name + " et " + node2Name + " car corr = 0");
+
                         Node node1 = graph.getNodeByName(node1Name);
                         Node node2 = graph.getNodeByName(node2Name);
-
                         if (node1 != null && node2 != null) {
                             node1.removeLink(node2);
                             node2.removeLink(node1);
                         }
 
-                        //NB: à demander si on supprime ou pas ces lignes de t_edges (où corr=0) ou ^pas
-//                        String deleteQuery = "DELETE FROM t_edges WHERE node1 = ? AND node2 = ?";
-//                        try (var deleteStatement = connection.prepareStatement(deleteQuery)) {
-//                            deleteStatement.setString(1, node1Name);
-//                            deleteStatement.setString(2, node2Name);
-//                            deleteStatement.executeUpdate();
-//                        } catch (SQLException e) {
-//                            throw new RuntimeException(e);
-//                        }
-
+                        // Supprime la ligne de `t_edges`
+                        String deleteQuery = "DELETE FROM t_edges WHERE node1 = ? AND node2 = ? AND correlation_exists = FALSE";
+                        try (var deleteStatement = connection.prepareStatement(deleteQuery)) {
+                            deleteStatement.setString(1, node1Name);
+                            deleteStatement.setString(2, node2Name);
+                            deleteStatement.executeUpdate();
+                        }
                     }
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
 
 
         // 4) Calcul des corrélations partielles pour les triplets de nœuds

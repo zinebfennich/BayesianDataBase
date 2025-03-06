@@ -73,29 +73,17 @@ public class DatabaseUtils {
      * @param column2    Nom de la deuxième colonne
      * @throws SQLException Si une erreur SQL survient
      */
-    public static void testcall1(Connection connection, String tableName, String column1, String column2)
-            throws SQLException {
+    public static void testcall1(Connection connection, String tableName, String column1, String column2) throws SQLException {
+        String sql = "INSERT INTO t_edges (sname, node1, node2, corr, correlation_exists) " +
+                "SELECT ?, ?, ?, CORR(" + column1 + ", " + column2 + "), " +
+                "CASE WHEN CORR(" + column1 + ", " + column2 + ") <> 0 THEN TRUE ELSE FALSE END " +
+                "FROM " + tableName;
 
-        // 1. Insérer les données dans la table T_edges
-        String sqlInsert = "INSERT INTO T_edges (sname, node1, node2, corr) VALUES (?, ?, ?, ?)";
-        try (PreparedStatement insertStatement = connection.prepareStatement(sqlInsert)) {
-            insertStatement.setString(1, tableName);
-            insertStatement.setString(2, column1);
-            insertStatement.setString(3, column2);
-            insertStatement.setInt(4, 0); // initialisation à 0, mais va être mis à jour par la procédure
-            insertStatement.executeUpdate();
-        }
-
-        // 2. Appeler la procédure p_corr_postgres pour calculer la corrélation
-        String sqlCall = "CALL p_corr_postgres(?, ?, ?)";
-        try (CallableStatement callStatement = connection.prepareCall(sqlCall)) {
-            // Passer les paramètres à la procédure
-            callStatement.setString(1, tableName); // p_supernode
-            callStatement.setString(2, column1);   // p_subnode1
-            callStatement.setString(3, column2);   // p_subnode2
-
-            // Exécuter la procédure
-            callStatement.execute();
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, tableName);
+            statement.setString(2, column1);
+            statement.setString(3, column2);
+            statement.executeUpdate();
         }
     }
 
