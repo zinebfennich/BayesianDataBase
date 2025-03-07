@@ -1,0 +1,185 @@
+package database;
+
+import java.sql.*;
+
+/**
+ * Cette classe contient des méthodes qui manipulent des structures globales de la base de données, telles que des tables,
+ * des colonnes au niveau global, ou des procédures stockées. Elle est centrée sur la gestion des tables, des requêtes SQL
+ * générales, ou des opérations globales sur la base de données.
+ * Cette classe regroupe des opérations qui agissent au niveau de la structure de la base de données dans son ensemble.
+ */
+public class DatabaseUtils {
+    //NB : penser à sécuriser les méthodes qui ont accès/modifient la bdd
+
+
+
+    /**
+     * Modifie la table spécifiée pour ajouter des colonnes numériques (_num)
+     * basées sur les colonnes alphanumériques existantes et les remplir avec hashtext().
+     *
+     * @param connection Connexion à la base de données
+     * @param nomtable Nom de la table à modifier
+     * @throws SQLException Si une erreur SQL survient
+     */
+    public static void alterTableAddNumFields(Connection connection, String nomtable) throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            // Vérifier et ajouter les colonnes _num si nécessaire
+            ColumUtils.addNumColumnsIfNeeded(connection, nomtable);
+
+            // Mettre à jour les valeurs hashées
+            updateHashedValues(statement, nomtable);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+
+
+    //NB possibilité de changement du script car vulnérabilité aux injections sql
+    private static void updateHashedValues(Statement statement, String nomtable) throws SQLException {
+        String hashUpdateScript = "DO $$ \n" +
+                "DECLARE \n" +
+                "    column_record RECORD;\n" +
+                "BEGIN\n" +
+                "    FOR column_record IN \n" +
+                "        SELECT column_name \n" +
+                "        FROM information_schema.columns \n" +
+                "        WHERE table_name = '" + nomtable + "'\n" +
+                "        AND column_name NOT LIKE '%_num'\n" +
+                "        AND data_type IN ('text', 'character varying')\n" + // Ajout de VARCHAR
+                "    LOOP\n" +
+                "        EXECUTE 'UPDATE " + nomtable + " SET ' || quote_ident(column_record.column_name) || '_num = hashtext(' || quote_ident(column_record.column_name) || '::TEXT);';\n" +
+                "    END LOOP;\n" +
+                "END $$;";
+
+        // Exécuter la mise à jour des valeurs hashées
+        statement.execute(hashUpdateScript);
+        System.out.println("Mise à jour des valeurs hashées terminée.");
+    }
+
+
+
+
+
+    /**
+     * La méthode testcall1 fait deux choses :
+     * Insertion des 2 variables dans la table T_edges.
+     * Appel de la procédure stockée p_corr_postgres pour calculer les corrélations.
+     *
+     * @param connection Connexion à la base de données
+     * @param tableName  Nom de la table source
+     * @param column1    Nom de la première colonne
+     * @param column2    Nom de la deuxième colonne
+     * @throws SQLException Si une erreur SQL survient
+     */
+    public static void testcall1(Connection connection, String tableName, String column1, String column2)
+            throws SQLException {
+
+        // 1. Insérer les données dans la table T_edges
+        String sqlInsert = "INSERT INTO T_edges (sname, node1, node2, corr) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement insertStatement = connection.prepareStatement(sqlInsert)) {
+            insertStatement.setString(1, tableName);
+            insertStatement.setString(2, column1);
+            insertStatement.setString(3, column2);
+            insertStatement.setInt(4, 0); // initialisation à 0, mais va être mis à jour par la procédure
+            insertStatement.executeUpdate();
+        }
+
+        // 2. Appeler la procédure p_corr_postgres pour calculer la corrélation
+        String sqlCall = "CALL p_corr_postgres(?, ?, ?)";
+        try (CallableStatement callStatement = connection.prepareCall(sqlCall)) {
+            // Passer les paramètres à la procédure
+            callStatement.setString(1, tableName); // p_supernode
+            callStatement.setString(2, column1);   // p_subnode1
+            callStatement.setString(3, column2);   // p_subnode2
+
+            // Exécuter la procédure
+            callStatement.execute();
+        }
+    }
+
+    /**
+     * Insère des données dans la table T_edges_2.
+     *
+     * @param connection Connexion à la base de données
+     * @param tableName  Nom de la table source
+     * @param column1    Nom de la première colonne
+     * @param column2    Nom de la deuxième colonne
+     * @param column3    Nom de la troisième colonne
+     * @throws SQLException Si une erreur SQL survient
+     */
+    public static void testcall2(Connection connection, String tableName, String column1, String column2, String column3) throws SQLException {
+        // Récupérer les corrélations simples de t_edges
+        Double r_yi_xj = getCorrelation(connection, tableName, column1, column2);
+        Double r_yi_xk = getCorrelation(connection, tableName, column1, column3);
+        Double r_xj_xk = getCorrelation(connection, tableName, column2, column3);
+
+        Double corrPartielle = null;
+
+        // Vérifier que les valeurs ne sont pas null pour éviter une erreur de calcul
+        if (r_yi_xj != null && r_yi_xk != null && r_xj_xk != null) {
+            // Appliquer la formule de la corrélation partielle
+            double denominator = Math.sqrt((1 - r_yi_xk * r_yi_xk) * (1 - r_xj_xk * r_xj_xk));
+            if (denominator != 0) { // Vérifier qu'on ne divise pas par zéro
+                corrPartielle = (r_yi_xj - r_yi_xk * r_xj_xk) / denominator;
+            } else {
+                corrPartielle = 0.0; // Éviter NaN en cas de division par zéro
+            }
+        } else {
+            corrPartielle = 0.0; // Si une des corrélations est manquante, on met 0
+        }
+
+        // Insérer la corrélation partielle dans t_edges_2
+        String sql = "INSERT INTO t_edges_2 (sname, node1, node2, node3, corr_part) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, tableName);
+            statement.setString(2, column1);
+            statement.setString(3, column2);
+            statement.setString(4, column3);
+            statement.setDouble(5, corrPartielle); // Insérer la vraie valeur calculée
+            statement.executeUpdate();
+        }
+    }
+
+    private static Double getCorrelation(Connection connection, String tableName, String node1, String node2) throws SQLException {
+        String query = "SELECT corr FROM t_edges WHERE node1 = ? AND node2 = ?";
+
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setString(1, node1);
+            statement.setString(2, node2);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getDouble("corr");
+                }
+            }
+        }
+        return null; // Si la corrélation n'est pas trouvée, on retourne null
+    }
+
+
+    /**
+     * Insère des données dans la table T_edges_ci1.
+     *
+     * @param connection Connexion à la base de données
+     * @param tableName  Nom de la table source
+     * @param column1    Nom de la première colonne
+     * @param column2    Nom de la deuxième colonne
+     * @param column3    Nom de la troisième colonne
+     * @throws SQLException Si une erreur SQL survient
+     */
+    public static void testcall3(Connection connection, String tableName, String column1, String column2,
+                                 String column3) throws SQLException {
+
+        String sql = "INSERT INTO T_edges_ci1 (sname, node1, node2, node3,corr12,corr13,corr23) VALUES (?, ?, ?, ?,?,?,?)";
+        CallableStatement statement = connection.prepareCall(sql);
+        statement.setString(1, tableName);
+        statement.setString(2, column1);
+        statement.setString(3, column2);
+        statement.setString(4, column3);
+        statement.setInt(5, 0);
+        statement.setInt(6, 0);
+        statement.setInt(7, 0);
+        statement.executeUpdate();
+    }
+}

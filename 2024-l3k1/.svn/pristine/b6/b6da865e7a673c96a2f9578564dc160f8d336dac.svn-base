@@ -8,7 +8,7 @@ import utils.PCAlgorithmUtils;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-
+//IL FAUT DECOUPER EN FONCTIONS
 /**
  * Contient l'implémentation de l'algorithme PC pour la découverte causale.
  */
@@ -16,7 +16,7 @@ public class PCAlgorithm {
     private String tableName;
     private Graph graph = new Graph();
 
-    public void discoverCausalStructure(Connection connection, String[] columns) {
+    public void discoverCausalStructure(Connection connection) {
         //1) créer un réseau bayésiens complet non orienté
         try {
             graph.addTableNodesToGraph(connection, tableName);
@@ -52,32 +52,28 @@ public class PCAlgorithm {
 
         //3) pour chaque ligne dans t-edges , si correlation =0 alors suppression du lien entre les noeuds
         try {
-            String query = "SELECT node1, node2, corr, correlation_exists FROM t_edges";
+            String query = "SELECT node1, node2, corr FROM t_edges";
             try (var statement = connection.createStatement();
                  var resultSet = statement.executeQuery(query)) {
 
                 while (resultSet.next()) {
                     String node1Name = resultSet.getString("node1");
                     String node2Name = resultSet.getString("node2");
-                    Boolean correlationExists = resultSet.getBoolean("correlation_exists");
+                    Double correlation = resultSet.getObject("corr", Double.class); // attention peut être null
 
-                    if (!correlationExists) {
-                        System.out.println("Suppression du lien entre " + node1Name + " et " + node2Name + " car corr = 0");
-
+                    // Vérifier si la corrélation est nulle ou égale à 0
+                    if (correlation != null && correlation == 0.0) {
                         Node node1 = graph.getNodeByName(node1Name);
                         Node node2 = graph.getNodeByName(node2Name);
+
                         if (node1 != null && node2 != null) {
                             node1.removeLink(node2);
                             node2.removeLink(node1);
                         }
 
-                        // Supprime la ligne de `t_edges`
-                        String deleteQuery = "DELETE FROM t_edges WHERE node1 = ? AND node2 = ? AND correlation_exists = FALSE";
-                        try (var deleteStatement = connection.prepareStatement(deleteQuery)) {
-                            deleteStatement.setString(1, node1Name);
-                            deleteStatement.setString(2, node2Name);
-                            deleteStatement.executeUpdate();
-                        }
+                        //NB: Il faut mettre le champ link à false
+
+
                     }
                 }
             }
@@ -86,7 +82,7 @@ public class PCAlgorithm {
         }
 
 
-// 4) Calcul des corrélations partielles pour les triplets de nœuds
+        // 4) Calcul des corrélations partielles pour les triplets de nœuds
         Combiner<Node> combinerTriplets = new Combiner<>(3, nodesTab);
         Node[] triplet = new Node[3];
 
@@ -107,7 +103,10 @@ public class PCAlgorithm {
             }
         }
 
-// 5) Suppression des liens entre les triplets de noeuds si chi-squared indique l'indépendance conditionnelle
+
+        //NB! Il faut utiliser le chi squared test sur les champs initialement numériques
+        // (donc pas les champs pour lesquels nous avons calculés le hash qui sont de la forme nomtable_num)
+        // 8) Utilisation du test du Chi-carré et suppression des liens entre les triplets de nœuds
         try {
             String query = "SELECT node1, node2, node3, corr_part FROM t_edges_2";
             try (var statement = connection.createStatement();
@@ -119,54 +118,29 @@ public class PCAlgorithm {
                     String node3Name = resultSet.getString("node3");
                     Double partialCorrelation = resultSet.getObject("corr_part", Double.class);
 
-                    // Vérifier si la corrélation partielle est faible (proche de 0)
-                    if (partialCorrelation != null && Math.abs(partialCorrelation) < 0.05) {
+                    // Vérifier si la corrélation partielle est nulle ou égale à 0
+                    if (partialCorrelation != null && partialCorrelation == 0.0) {
                         Node node1 = graph.getNodeByName(node1Name);
                         Node node2 = graph.getNodeByName(node2Name);
                         Node node3 = graph.getNodeByName(node3Name);
 
-                        // Vérifier si les variables sont numériques avant d'appliquer le test du Chi-carré
-                        if (node1.isNumeric() && node2.isNumeric() && node3.isNumeric()) {
-                            boolean isIndependent = PCAlgorithmUtils.performChiSquaredTestForThreeVariables(connection, tableName, node1Name, node2Name, node3Name);
+                        if (node1 != null && node2 != null && node3 != null) {
+                            // Vérifier si les champs sont initialement numériques
+                            if (node1.isNumeric() && node2.isNumeric() && node3.isNumeric()) {
+                                // Utiliser le test du Chi-carré pour vérifier l'indépendance conditionnelle
+                                boolean isIndependent = PCAlgorithmUtils.performChiSquaredTestForThreeVariables(connection, tableName, node1Name, node2Name, node3Name);
 
-                            // Si les variables sont indépendantes conditionnellement, on supprime les liens
-                            if (isIndependent) {
-                                System.out.println("Suppression du lien entre " + node1Name + ", " + node2Name + " et " + node3Name + " (Indépendance conditionnelle)");
-
-                                if (node1 != null && node2 != null && node3 != null) {
+                                if (isIndependent) {
+                                    // Supprimer les liens entre les nœuds
                                     node1.removeLink(node2);
                                     node2.removeLink(node1);
                                     node1.removeLink(node3);
                                     node3.removeLink(node1);
                                     node2.removeLink(node3);
                                     node3.removeLink(node2);
+
+                                    //NB: Il faut mettre le champ link à false
                                 }
-                                String updateQuery = "UPDATE t_edges_2 SET correlation_exists = ? WHERE node1 = ? AND node2 = ? AND node3 = ?";
-                                try (var updateStatement = connection.prepareStatement(updateQuery)) {
-                                    boolean correlationExists = partialCorrelation != null && Math.abs(partialCorrelation) >= 0.0001;  // 🔥 Si corr_part ≈ 0, mettre FALSE
-
-                                    updateStatement.setBoolean(1, correlationExists);
-                                    updateStatement.setString(2, node1Name);
-                                    updateStatement.setString(3, node2Name);
-                                    updateStatement.setString(4, node3Name);
-
-                                    int rowsUpdated = updateStatement.executeUpdate();
-                                    System.out.println("🔄 Mise à jour de correlation_exists (" + correlationExists + ") pour : "
-                                            + node1Name + ", " + node2Name + ", " + node3Name);
-                                    System.out.println("✔ Nombre de lignes mises à jour : " + rowsUpdated);
-
-                                    if (rowsUpdated == 0) {
-                                        System.out.println("⚠ Aucune ligne mise à jour ! Vérifie si ces valeurs existent bien dans t_edges_2.");
-                                    }
-                                } catch (SQLException e) {
-                                    throw new RuntimeException(e);
-                                }
-
-
-
-
-
-
                             }
                         }
                     }
@@ -177,5 +151,9 @@ public class PCAlgorithm {
         }
 
 
-    }}
+
+    }
+
+
+}
 

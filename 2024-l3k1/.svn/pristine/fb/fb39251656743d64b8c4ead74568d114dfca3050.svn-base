@@ -1,0 +1,24 @@
+COMMENT UTILISER SVN SUR WINDOWS ???
+
+- afin d'éviter les tracas avec Tortoise, je vous propose une méthode relativement simple
+qui permettra d'utiliser SVN à la manière de Linux
+
+1) Tout d'abord, sur votre PowerShell, tapez la commande $ wsl --install 
+Le WSL est en fait "Windows SubSystem For Linux"
+
+2) Une fois le WSL installé, il vous faudra une version de distribution Linux qui se trouve facilement sur le 
+Microsoft Store (Ubuntu est la plus commune) : exécutez la et le tour est joué
+
+
+****** METHODE ENCORE PLUS SIMPLE SANS UTILISER LE POWERSHELL *******
+
+1) WIN + R (commande exécuter) tapez : optionalfeatures
+2) En faisant défiler la liste on trouve "Sous Systeme Windows pour Linux" :)
+
+
+UNE FOIS LE WSL OPERATIONNEL 
+
+On peut le lancer en tapant "WSL" sur la recherche Windows et exécuter des commandes Linux
+à notre guise
+
+Attention au répertoire courant par défaut 

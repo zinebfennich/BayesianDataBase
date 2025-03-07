@@ -1,0 +1,26 @@
+ACCEDER AU DEPOT 
+
+1) sudo apt install subversion
+
+
+2) svn co https://forge.ens.math-info.univ-paris5.fr/svn/2023-l2**/ --username i******
+
+
+3) mkdir branches trunk tages 
+
+trunk : "tronc" du projet où le code a été validé par l'équipe 
+branches : doit contenir plusieurs sous-dossiers ooù chacun peut développer une partie du code pour ensuite la placer dans "trunk"
+tags : versions du programme/logiciel qui sont utilisables qui se stockent au fur et à mesure des ajouts de fonctionnalité 
+
+4) ajouter des dossier sur svn : svn add votredossier
+
+5) "commiter" les modifications (c-à-d envoie les modif de la copie de travail vers le dépôt) : 
+svn -m commit "Votre commentaire sur la modif"
+
+6) quand un fichier est modifié en local, on peut utiliser : svn update 
+pour mettre à jour le dépôt 
+
+A propos de l'utilisation des branches , on peut directement copier ce qui se trouve dans le "trunk" sur un sous-dossier à son nom par exemple : 
+svn copy trunk branches/PrenomOuCEQueVousVoulez
+
+
