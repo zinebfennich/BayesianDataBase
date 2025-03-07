@@ -12,112 +12,129 @@ import java.util.Map;
 
 public class PCAlgorithmUtils {
 
-    // Méthode pour effectuer le test du Chi-carré pour 2 variables
-    public static boolean performChiSquaredTestForTwoVariables(Connection connection, String tableName, String var1, String var2) throws SQLException {
-        String query = "SELECT " + var1 + ", " + var2 + " FROM " + tableName;
+    public static boolean performChiSquaredTestForTwoVariables(Connection connection, String tableName, String col1, String col2) throws SQLException {
+        // 1️⃣ Créer la requête pour compter les occurrences de chaque combinaison de valeurs
+        String query = "SELECT " + col1 + ", " + col2 + ", COUNT(*) as count FROM " + tableName + " GROUP BY " + col1 + ", " + col2;
+
+        // 2️⃣ Stocker les valeurs observées
+        Map<String, Integer> frequencyTable = new HashMap<>();
+        int totalSamples = 0;
 
         try (PreparedStatement statement = connection.prepareStatement(query);
              ResultSet resultSet = statement.executeQuery()) {
 
-            // Construire le tableau de contingence
-            Map<String, Map<String, Integer>> contingencyTable = new HashMap<>();
-
             while (resultSet.next()) {
-                String value1 = resultSet.getString(var1);
-                String value2 = resultSet.getString(var2);
-
-                contingencyTable.putIfAbsent(value1, new HashMap<>());
-                Map<String, Integer> subTable = contingencyTable.get(value1);
-                subTable.put(value2, subTable.getOrDefault(value2, 0) + 1);
+                String key = resultSet.getString(col1) + "-" + resultSet.getString(col2);
+                int count = resultSet.getInt("count");
+                frequencyTable.put(key, count);
+                totalSamples += count;
             }
-
-            // Convertir le tableau de contingence en tableau 2D
-            int rows = contingencyTable.size();
-            int cols = contingencyTable.values().stream().mapToInt(Map::size).max().orElse(0);
-            long[][] table = new long[rows][cols];
-
-            int rowIndex = 0;
-            for (Map<String, Integer> subTable : contingencyTable.values()) {
-                int colIndex = 0;
-                for (Map.Entry<String, Integer> entry : subTable.entrySet()) {
-                    table[rowIndex][colIndex++] = entry.getValue();
-                }
-                rowIndex++;
-            }
-
-            // Effectuer le test du Chi-carré
-            ChiSquareTest chiSquareTest = new ChiSquareTest();
-            double chiSquare = chiSquareTest.chiSquare(table);
-            int degreesOfFreedom = (rows - 1) * (cols - 1);
-            double pValue = 1.0 - new ChiSquaredDistribution(degreesOfFreedom).cumulativeProbability(chiSquare);
-
-            // Retourner vrai si les variables sont indépendantes (p-value > seuil)
-            return pValue > 0.05;
         }
-    }
 
-    // Méthode pour effectuer le test du Chi-carré pour 3 variables
-    public static boolean performChiSquaredTestForThreeVariables(Connection connection, String tableName, String var1, String var2, String var3) throws SQLException {
-        String query = "SELECT " + var1 + ", " + var2 + ", " + var3 + " FROM " + tableName;
+        // 3️⃣ Calculer les fréquences attendues sous l'hypothèse d'indépendance
+        double chiSquare = 0;
+        double expectedFrequency = (double) totalSamples / frequencyTable.size();
+
+        for (int observed : frequencyTable.values()) {
+            chiSquare += Math.pow(observed - expectedFrequency, 2) / expectedFrequency;
+        }
+
+        // 4️⃣ Seuil de significativité (p-value = 0.05)
+        double chiSquareThreshold = 3.841; // df = 1, alpha = 0.05
+
+        return chiSquare < chiSquareThreshold; // TRUE = indépendant, FALSE = corrélé
+    }
+    public static boolean performChiSquaredTestForThreeVariables(Connection connection, String tableName, String col1, String col2, String col3) throws SQLException {
+        String query = "SELECT " + col1 + ", " + col2 + ", " + col3 + ", COUNT(*) as count FROM " + tableName + " GROUP BY " + col1 + ", " + col2 + ", " + col3;
+
+        Map<String, Integer> frequencyTable = new HashMap<>();
+        Map<String, Integer> conditionalTotals = new HashMap<>();
+        int totalSamples = 0;
 
         try (PreparedStatement statement = connection.prepareStatement(query);
              ResultSet resultSet = statement.executeQuery()) {
 
-            // Construire le tableau de contingence
-            Map<String, Map<String, Map<String, Integer>>> contingencyTable = new HashMap<>();
+            while (resultSet.next()) {
+                String key = resultSet.getString(col1) + "-" + resultSet.getString(col2) + "-" + resultSet.getString(col3);
+                int count = resultSet.getInt("count");
+                frequencyTable.put(key, count);
+                totalSamples += count;
+
+                // Stocker les totaux conditionnels sur col3
+                String conditionalKey = resultSet.getString(col3);
+                conditionalTotals.put(conditionalKey, conditionalTotals.getOrDefault(conditionalKey, 0) + count);
+            }
+        }
+
+        // Calcul du Chi-carré conditionnel
+        double chiSquare = 0;
+
+        for (Map.Entry<String, Integer> entry : frequencyTable.entrySet()) {
+            String key = entry.getKey();
+            int observed = entry.getValue();
+
+            String conditionalKey = key.split("-")[2]; // Extraire la valeur de col3
+            Integer totalForConditionalKey = conditionalTotals.getOrDefault(conditionalKey, 0); // 🔥 FIX ici
+            if (totalForConditionalKey == 0) continue; // Évite la division par 0
+
+            double expectedFrequency = (double) totalForConditionalKey / frequencyTable.size();
+            // peut etre celle la est plus correcte double expectedFrequency = (double) totalForConditionalKey / totalSamples;
+            chiSquare += Math.pow(observed - expectedFrequency, 2) / expectedFrequency;
+        }
+
+        // Seuil de significativité pour df = 2 (3-1)
+        double chiSquareThreshold = 5.991; // df = 2, alpha = 0.05
+
+        return chiSquare < chiSquareThreshold; // TRUE = indépendant sous col3, FALSE = dépendant
+
+
+    }
+
+    public static boolean performChiSquaredTestForFourVariables(Connection connection, String tableName, String col1, String col2, String col3, String col4) throws SQLException {
+        // Requête SQL pour obtenir les données groupées par les quatre colonnes
+        String query = "SELECT " + col1 + ", " + col2 + ", " + col3 + ", " + col4 + ", COUNT(*) as count FROM " + tableName + " GROUP BY " + col1 + ", " + col2 + ", " + col3 + ", " + col4;
+
+        Map<String, Integer> frequencyTable = new HashMap<>();
+        Map<String, Integer> conditionalTotals = new HashMap<>();
+        int totalSamples = 0;
+
+        try (PreparedStatement statement = connection.prepareStatement(query);
+             ResultSet resultSet = statement.executeQuery()) {
 
             while (resultSet.next()) {
-                String value1 = resultSet.getString(var1);
-                String value2 = resultSet.getString(var2);
-                String value3 = resultSet.getString(var3);
+                String key = resultSet.getString(col1) + "-" + resultSet.getString(col2) + "-" + resultSet.getString(col3) + "-" + resultSet.getString(col4);
+                int count = resultSet.getInt("count");
+                frequencyTable.put(key, count);
+                totalSamples += count;
 
-                contingencyTable.putIfAbsent(value1, new HashMap<>());
-                Map<String, Map<String, Integer>> subTable1 = contingencyTable.get(value1);
-                subTable1.putIfAbsent(value2, new HashMap<>());
-                Map<String, Integer> subTable2 = subTable1.get(value2);
-                subTable2.put(value3, subTable2.getOrDefault(value3, 0) + 1);
+                // Stocker les totaux conditionnels sur col4
+                String conditionalKey = resultSet.getString(col4);
+                conditionalTotals.put(conditionalKey, conditionalTotals.getOrDefault(conditionalKey, 0) + count);
             }
-
-            // Convertir le tableau de contingence en tableau 3D
-            int dim1 = contingencyTable.size();
-            int dim2 = contingencyTable.values().stream().mapToInt(Map::size).max().orElse(0);
-            int dim3 = contingencyTable.values().stream().flatMap(map -> map.values().stream()).mapToInt(Map::size).max().orElse(0);
-            long[][][] table = new long[dim1][dim2][dim3];
-
-            int index1 = 0;
-            for (Map<String, Map<String, Integer>> subTable1 : contingencyTable.values()) {
-                int index2 = 0;
-                for (Map<String, Integer> subTable2 : subTable1.values()) {
-                    int index3 = 0;
-                    for (Map.Entry<String, Integer> entry : subTable2.entrySet()) {
-                        table[index1][index2][index3++] = entry.getValue();
-                    }
-                    index2++;
-                }
-                index1++;
-            }
-
-            // Effectuer le test du Chi-carré
-            ChiSquareTest chiSquareTest = new ChiSquareTest();
-            double chiSquare = 0.0;
-            int degreesOfFreedom = 0;
-
-            for (int i = 0; i < dim1; i++) {
-                for (int j = 0; j < dim2; j++) {
-                    long[][] subTable = new long[dim3][2];
-                    for (int k = 0; k < dim3; k++) {
-                        subTable[k][0] = table[i][j][k];
-                        subTable[k][1] = table[i][j][k];
-                    }
-                    chiSquare += chiSquareTest.chiSquare(subTable);
-                    degreesOfFreedom += (subTable.length - 1) * (subTable[0].length - 1);
-                }
-            }
-
-            double pValue = 1.0 - new ChiSquaredDistribution(degreesOfFreedom).cumulativeProbability(chiSquare);
-
-            // Retourner vrai si les variables sont indépendantes (p-value > seuil)
-            return pValue > 0.05;
         }
+
+        // Calcul du Chi-carré conditionnel pour 4 variables
+        double chiSquare = 0;
+
+        for (Map.Entry<String, Integer> entry : frequencyTable.entrySet()) {
+            String key = entry.getKey();
+            int observed = entry.getValue();
+
+            String conditionalKey = key.split("-")[3]; // Extraire la valeur de col4
+            Integer totalForConditionalKey = conditionalTotals.getOrDefault(conditionalKey, 0); // 🔥 FIX ici
+            if (totalForConditionalKey == 0) continue; // Évite la division par 0
+
+            double expectedFrequency = (double) totalForConditionalKey / frequencyTable.size();
+            // Alternative plus correcte pour expectedFrequency : (double) totalForConditionalKey / totalSamples;
+            chiSquare += Math.pow(observed - expectedFrequency, 2) / expectedFrequency;
+        }
+
+        // Seuil de significativité pour df = 3 (4-1)
+        double chiSquareThreshold = 7.815; // df = 3, alpha = 0.05
+
+        return chiSquare < chiSquareThreshold; // TRUE = indépendant sous col4, FALSE = dépendant
     }
+
+
+
 }

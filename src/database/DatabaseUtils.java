@@ -182,4 +182,66 @@ public class DatabaseUtils {
         statement.setInt(7, 0);
         statement.executeUpdate();
     }
+
+    //remplace testcall3
+    /**
+     * Insère des données dans la table T_edges_ci1 avec un quadruplet de nœuds.
+     *
+     * @param connection Connexion à la base de données
+     * @param tableName  Nom de la table source
+     * @param column1    Nom du premier nœud
+     * @param column2    Nom du deuxième nœud
+     * @param column3    Nom du troisième nœud
+     * @param column4    Nom du quatrième nœud
+     * @throws SQLException Si une erreur SQL survient
+     */
+    public static void testcall4(Connection connection, String tableName, String column1, String column2, String column3, String column4) throws SQLException {
+        // Calculer les corrélations
+        double corr12 = calculateCorrelation(connection, tableName, column1, column2);
+        double corr13 = calculateCorrelation(connection, tableName, column1, column3);
+        double corr14 = calculateCorrelation(connection, tableName, column1, column4);
+        double corr23 = calculateCorrelation(connection, tableName, column2, column3);
+        double corr24 = calculateCorrelation(connection, tableName, column2, column4);
+        double corr34 = calculateCorrelation(connection, tableName, column3, column4);
+
+        // Insérer les résultats dans la table T_edges_ci1
+        insertCorrelations(connection, tableName, column1, column2, column3, column4, corr12, corr13, corr14, corr23, corr24, corr34);
+    }
+
+    private static double calculateCorrelation(Connection connection, String tableName, String column1, String column2) throws SQLException {
+        String sqlCall = "CALL p_corr_postgres(?, ?, ?)";
+        try (CallableStatement callStatement = connection.prepareCall(sqlCall)) {
+            callStatement.setString(1, tableName);
+            callStatement.setString(2, column1);
+            callStatement.setString(3, column2);
+            callStatement.execute();
+
+            // Supposons que la procédure retourne la corrélation dans un ResultSet
+            try (ResultSet resultSet = callStatement.getResultSet()) {
+                if (resultSet.next()) {
+                    return resultSet.getDouble(1); // Récupérer la valeur de corrélation
+                }
+            }
+        }
+        return 0.0; // Valeur par défaut si la corrélation ne peut pas être calculée
+    }
+
+    private static void insertCorrelations(Connection connection, String tableName, String column1, String column2, String column3, String column4, double corr12, double corr13, double corr14, double corr23, double corr24, double corr34) throws SQLException {
+        String sql = "INSERT INTO T_edges_ci1 (sname, node1, node2, node3, node4, corr12, corr13, corr14, corr23, corr24, corr34) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (CallableStatement statement = connection.prepareCall(sql)) {
+            statement.setString(1, tableName);
+            statement.setString(2, column1);
+            statement.setString(3, column2);
+            statement.setString(4, column3);
+            statement.setString(5, column4);
+            statement.setDouble(6, corr12);
+            statement.setDouble(7, corr13);
+            statement.setDouble(8, corr14);
+            statement.setDouble(9, corr23);
+            statement.setDouble(10, corr24);
+            statement.setDouble(11, corr34);
+            statement.executeUpdate();
+        }
+    }
+
 }
