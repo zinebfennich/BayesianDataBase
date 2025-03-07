@@ -79,10 +79,8 @@ public class PCAlgorithm {
             e.printStackTrace();
         }
 
-
-
         // 4) Calcul des corrélations partielles pour les triplets de noeuds
-        //INDEPENDANCE CONDITIONNELLES D ORDRE 1 (A et B | C)
+        //INDEPENDANCE CONDITIONNELLE D'ORDRE 1 (A et B | C)
         Combiner<Node> combinerTriplets = new Combiner<>(3, nodesTab);
         Node[] triplet = new Node[3];
 
@@ -104,8 +102,8 @@ public class PCAlgorithm {
         }
 
         // 5) Suppression des liens entre les triplets de noeuds si chi-squared indique l'indépendance conditionnelle
-// NB! Il faut utiliser le chi squared test sur les champs initialement numériques
-// (donc pas les champs pour lesquels nous avons calculés le hash qui sont de la forme nomtable_num)
+        // NB! Il faut utiliser le chi squared test sur les champs initialement numériques
+        // (donc pas les champs pour lesquels nous avons calculé le hash qui sont de la forme nomtable_num)
 
         try {
             String query = "SELECT node1, node2, node3, corr_part, correlation_exists FROM t_edges_2";
@@ -165,9 +163,8 @@ public class PCAlgorithm {
                 throw new RuntimeException("Erreur lors de la récupération des données dans t_edges_2.", e);
             }
 
-
             // 6) Calcul des corrélations partielles pour les quadruplets de noeuds
-            //INDEPENDANCE CONDITIONNELLES D ORDRE 2 (A et B | {C,D})
+            //INDEPENDANCE CONDITIONNELLE D'ORDRE 2 (A et B | {C,D})
             Combiner<Node> combinerQuadruplets = new Combiner<>(4, nodesTab);
             Node[] quadruplet = new Node[4];
 
@@ -210,43 +207,37 @@ public class PCAlgorithm {
                             Node node3 = graph.getNodeByName(node3Name);
                             Node node4 = graph.getNodeByName(node4Name);
 
-                            // Vérification des variables numériques pour le test du chi-carré
-                            if (node1.isNumeric() && node2.isNumeric() && node3.isNumeric() && node4.isNumeric()) {
-                                boolean isIndependent = PCAlgorithmUtils.performChiSquaredTestForFourVariables(connection, tableName, node1Name, node2Name, node3Name, node4Name);
-
+                            // Vérifier si les variables sont numériques avant d'appliquer le test du Chi-carré
+                            if (node1 != null && node2 != null && node3 != null && node4 != null) {
+                                boolean isIndependent = PCAlgorithmUtils.performChiSquaredTestForFourVariables(connection, tableName,
+                                        node1Name, node2Name, node3Name, node4Name);
                                 if (isIndependent) {
-                                    // Si les variables sont indépendantes conditionnellement, on supprime le lien
-                                    System.out.println("Suppression du lien entre " + node1Name + " et " + node2Name +
-                                            " sachant " + node3Name + " et " + node4Name);
-
-                                    if (node1 != null && node2 != null) {
-                                        node1.removeLink(node2);
-                                        node2.removeLink(node1);
-                                    }
+                                    System.out.println("Suppression du lien entre " + node1Name + ", " + node2Name + ", "
+                                            + node3Name + " et " + node4Name + " car corr = 0 sachant " + node3Name + " et " + node4Name);
+                                    node1.removeLink(node2);
+                                    node2.removeLink(node1);
                                 }
                             }
                         }
                     }
-                } catch (SQLException e) {
-                    e.printStackTrace();
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Erreur lors de l'exécution de l'algorithme PC.", e);
+        }
+
+        //8) découvrir les v_structures
+        // 2 variables A et B ont des liens vers une 3ème variable mais ne sont pas directement liées entre elles
+        VStructureDetector detector = new VStructureDetector();
+        detector.detectVStructures(graph);
+
+        // Une fois les v-structures détectées, il faut orienter les arêtes restantes pour éviter des v-structures nouvelles
+        detector.orientRemainingEdges(graph);
 
 
 
-
-            //8) découvrir les v_structures
-            // 2 variables A et B ont des liens vers une 3ème variable mais ne sont pas directement liées entre elles
-            VStructureDetector detector = new VStructureDetector();
-            detector.detectVStructures(graph);
-
-            // Une fois les v-structures détectées, il faut orienter les arêtes restantes pour éviter des v-structures nouvelles
-            detector.orientRemainingEdges(graph);
-
-
-        }}
-
-
+    }
 }
