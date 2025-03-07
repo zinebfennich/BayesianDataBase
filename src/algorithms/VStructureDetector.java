@@ -29,6 +29,8 @@ public class VStructureDetector {
                             // Si C conditionne à la fois A et B, c'est une v-structure
                             if (A_corr_C && B_corr_C) {
                                 System.out.println("V-structure détectée entre " + A.getName() + ", " + B.getName() + " et " + C.getName());
+                                //il faut insérer le triplet trouvé dans vstructures
+                                //il faut orienter les fleches du v structure dans le graphe
                             }
                         }
                     }
@@ -37,6 +39,7 @@ public class VStructureDetector {
         }
     }
 
+    //a revoir / rectifier
     public static void orientRemainingEdges(Graph graph) {
         List<Node> nodes = graph.getNodes();
 
