@@ -138,10 +138,10 @@ public class PCAlgorithm {
 
     private void removeConditionallyIndependentEdges(Connection connection) {
         try (var statement = connection.createStatement();
-             var resultSet = statement.executeQuery("SELECT node1, node2, node3, corr_part FROM t_edges_2")) {
+             var resultSet = statement.executeQuery("SELECT node1, node2, node3, correlation_exists FROM t_edges_2")) {
 
             while (resultSet.next()) {
-                if (isConditionallyIndependent(connection, resultSet)) {
+                if (!) {
                     graph.removeEdge(resultSet.getString("node1"), resultSet.getString("node2"));
                     updateCorrelationExistence(connection, resultSet);
                 }
