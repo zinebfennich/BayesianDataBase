@@ -65,4 +65,13 @@ public class Graph {
         return null;
     }
 
+    public void removeEdge(String node1Name, String node2Name) {
+        Node node1 = getNodeByName(node1Name);
+        Node node2 = getNodeByName(node2Name);
+        if (node1 != null && node2 != null) {
+            node1.removeLink(node2);
+            node2.removeLink(node1);
+        }
+    }
+
 }

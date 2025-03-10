@@ -1,6 +1,11 @@
 package database;
 
+import utils.PCAlgorithmUtils;
+
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Cette classe contient des méthodes qui manipulent des structures globales de la base de données, telles que des tables,
@@ -10,8 +15,6 @@ import java.sql.*;
  */
 public class DatabaseUtils {
     //NB : penser à sécuriser les méthodes qui ont accès/modifient la bdd
-
-
 
     /**
      * Modifie la table spécifiée pour ajouter des colonnes numériques (_num)
@@ -35,7 +38,6 @@ public class DatabaseUtils {
     }
 
 
-
     //NB possibilité de changement du script car vulnérabilité aux injections sql
     private static void updateHashedValues(Statement statement, String nomtable) throws SQLException {
         String hashUpdateScript = "DO $$ \n" +
@@ -57,8 +59,6 @@ public class DatabaseUtils {
         statement.execute(hashUpdateScript);
         System.out.println("Mise à jour des valeurs hashées terminée.");
     }
-
-
 
 
 
@@ -87,63 +87,7 @@ public class DatabaseUtils {
         }
     }
 
-    /**
-     * Insère des données dans la table T_edges_2.
-     *
-     * @param connection Connexion à la base de données
-     * @param tableName  Nom de la table source
-     * @param column1    Nom de la première colonne
-     * @param column2    Nom de la deuxième colonne
-     * @param column3    Nom de la troisième colonne
-     * @throws SQLException Si une erreur SQL survient
-     */
-    public static void testcall2(Connection connection, String tableName, String column1, String column2, String column3) throws SQLException {
-        // Récupérer les corrélations simples de t_edges
-        Double r_yi_xj = getCorrelation(connection, tableName, column1, column2);
-        Double r_yi_xk = getCorrelation(connection, tableName, column1, column3);
-        Double r_xj_xk = getCorrelation(connection, tableName, column2, column3);
 
-        Double corrPartielle = null;
-
-        // Vérifier que les valeurs ne sont pas null pour éviter une erreur de calcul
-        if (r_yi_xj != null && r_yi_xk != null && r_xj_xk != null) {
-            // Appliquer la formule de la corrélation partielle
-            double denominator = Math.sqrt((1 - r_yi_xk * r_yi_xk) * (1 - r_xj_xk * r_xj_xk));
-            if (denominator != 0) { // Vérifier qu'on ne divise pas par zéro
-                corrPartielle = (r_yi_xj - r_yi_xk * r_xj_xk) / denominator;
-            } else {
-                corrPartielle = 0.0; // Éviter NaN en cas de division par zéro
-            }
-        } else {
-            corrPartielle = 0.0; // Si une des corrélations est manquante, on met 0
-        }
-
-        // Insérer la corrélation partielle dans t_edges_2
-        String sql = "INSERT INTO t_edges_2 (sname, node1, node2, node3, corr_part) VALUES (?, ?, ?, ?, ?)";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, tableName);
-            statement.setString(2, column1);
-            statement.setString(3, column2);
-            statement.setString(4, column3);
-            statement.setDouble(5, corrPartielle); // Insérer la vraie valeur calculée
-            statement.executeUpdate();
-        }
-    }
-
-    private static Double getCorrelation(Connection connection, String tableName, String node1, String node2) throws SQLException {
-        String query = "SELECT corr FROM t_edges WHERE node1 = ? AND node2 = ?";
-
-        try (PreparedStatement statement = connection.prepareStatement(query)) {
-            statement.setString(1, node1);
-            statement.setString(2, node2);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    return resultSet.getDouble("corr");
-                }
-            }
-        }
-        return null; // Si la corrélation n'est pas trouvée, on retourne null
-    }
 
 
     /**
@@ -165,9 +109,179 @@ public class DatabaseUtils {
         statement.setString(2, column1);
         statement.setString(3, column2);
         statement.setString(4, column3);
-        statement.setInt(5, 0);
-        statement.setInt(6, 0);
-        statement.setInt(7, 0);
-        statement.executeUpdate();
+        if (ColumUtils.columnIsNumeric(connection,tableName,column1) || ColumUtils.columnIsNumeric(connection,tableName,column2) || ColumUtils.columnIsNumeric(connection,tableName,column3)) {
+            statement.setInt(5, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column1,column2,column3));
+            statement.setInt(6, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column1,column3,column2));
+            statement.setInt(7, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column2,column3,column1));
+        }else{
+            //insert khi2
+        }
+
+
+        //si discrètes khi 2
+//        // **Ajoute la condition ici** pour ignorer `id`
+//        if (!colonne1.equals("id") && !colonne2.equals("id") && !colonne3.equals("id")) {
+//            boolean isIndependent = false;
+//            try {
+//                isIndependent = PCAlgorithmUtils.performChiSquaredTestForThreeVariables(
+//                        connection, tableName, colonne1, colonne2, colonne3);
+//            } catch (SQLException e) {
+//                e.printStackTrace();
+//            }
+
+            statement.executeUpdate();
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//    /**
+//     * Insère des données dans la table T_edges_2.
+//     *
+//     * @param connection Connexion à la base de données
+//     * @param tableName  Nom de la table source
+//     * @param column1    Nom de la première colonne
+//     * @param column2    Nom de la deuxième colonne
+//     * @param column3    Nom de la troisième colonne
+//     * @throws SQLException Si une erreur SQL survient
+//     */
+//    public static void testcall2(Connection connection, String tableName, String column1, String column2, String column3) throws SQLException {
+//        // Récupérer les corrélations simples de t_edges
+//        Double r_yi_xj = getCorrelation(connection, tableName, column1, column2);
+//        Double r_yi_xk = getCorrelation(connection, tableName, column1, column3);
+//        Double r_xj_xk = getCorrelation(connection, tableName, column2, column3);
+//
+//        Double corrPartielle = null;
+//
+//        // Vérifier que les valeurs ne sont pas null pour éviter une erreur de calcul
+//        if (r_yi_xj != null && r_yi_xk != null && r_xj_xk != null) {
+//            // Appliquer la formule de la corrélation partielle
+//            double denominator = Math.sqrt((1 - r_yi_xk * r_yi_xk) * (1 - r_xj_xk * r_xj_xk));
+//            if (denominator != 0) { // Vérifier qu'on ne divise pas par zéro
+//                corrPartielle = (r_yi_xj - r_yi_xk * r_xj_xk) / denominator;
+//            } else {
+//                corrPartielle = 0.0; // Éviter NaN en cas de division par zéro
+//            }
+//        } else {
+//            corrPartielle = 0.0; // Si une des corrélations est manquante, on met 0
+//        }
+//
+//        // Insérer la corrélation partielle dans t_edges_2
+//        String sql = "INSERT INTO t_edges_2 (sname, node1, node2, node3, corr_part) VALUES (?, ?, ?, ?, ?)";
+//        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+//            statement.setString(1, tableName);
+//            statement.setString(2, column1);
+//            statement.setString(3, column2);
+//            statement.setString(4, column3);
+//            statement.setDouble(5, corrPartielle); // Insérer la vraie valeur calculée
+//            statement.executeUpdate();
+//        }
+//    }
+
+//    private static Double getCorrelation(Connection connection, String tableName, String node1, String node2) throws SQLException {
+//        String query = "SELECT corr FROM t_edges WHERE node1 = ? AND node2 = ?";
+//
+//        try (PreparedStatement statement = connection.prepareStatement(query)) {
+//            statement.setString(1, node1);
+//            statement.setString(2, node2);
+//            try (ResultSet resultSet = statement.executeQuery()) {
+//                if (resultSet.next()) {
+//                    return resultSet.getDouble("corr");
+//                }
+//            }
+//        }
+//        return null; // Si la corrélation n'est pas trouvée, on retourne null
+//    }
+
+
+
+
+//    //remplace testcall3
+//    /**
+//     * Insère des données dans la table T_edges_ci1 avec un quadruplet de nœuds.
+//     *
+//     * @param connection Connexion à la base de données
+//     * @param tableName  Nom de la table source
+//     * @param column1    Nom du premier nœud
+//     * @param column2    Nom du deuxième nœud
+//     * @param column3    Nom du troisième nœud
+//     * @param column4    Nom du quatrième nœud
+//     * @throws SQLException Si une erreur SQL survient
+//     */
+//    public static void testcall4(Connection connection, String tableName, String column1, String column2, String column3, String column4) throws SQLException {
+//        // Calculer les corrélations
+//        double corr12 = calculateCorrelation(connection, tableName, column1, column2);
+//        double corr13 = calculateCorrelation(connection, tableName, column1, column3);
+//        double corr14 = calculateCorrelation(connection, tableName, column1, column4);
+//        double corr23 = calculateCorrelation(connection, tableName, column2, column3);
+//        double corr24 = calculateCorrelation(connection, tableName, column2, column4);
+//        double corr34 = calculateCorrelation(connection, tableName, column3, column4);
+//
+//        // Insérer les résultats dans la table T_edges_ci1
+//        insertCorrelations(connection, tableName, column1, column2, column3, column4, corr12, corr13, corr14, corr23, corr24, corr34);
+//    }
+
+//    private static double calculateCorrelation(Connection connection, String tableName, String column1, String column2) throws SQLException {
+//        String sqlCall = "CALL p_corr_postgres(?, ?, ?)";
+//        try (CallableStatement callStatement = connection.prepareCall(sqlCall)) {
+//            callStatement.setString(1, tableName);
+//            callStatement.setString(2, column1);
+//            callStatement.setString(3, column2);
+//            callStatement.execute();
+//
+//            // Supposons que la procédure retourne la corrélation dans un ResultSet
+//            try (ResultSet resultSet = callStatement.getResultSet()) {
+//                if (resultSet.next()) {
+//                    return resultSet.getDouble(1); // Récupérer la valeur de corrélation
+//                }
+//            }
+//        }
+//        return 0.0; // Valeur par défaut si la corrélation ne peut pas être calculée
+//    }
+
+//    private static void insertCorrelations(Connection connection, String tableName, String column1, String column2, String column3, String column4, double corr12, double corr13, double corr14, double corr23, double corr24, double corr34) throws SQLException {
+//        String sql = "INSERT INTO T_edges_ci1 (sname, node1, node2, node3, node4, corr12, corr13, corr14, corr23, corr24, corr34) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+//        try (CallableStatement statement = connection.prepareCall(sql)) {
+//            statement.setString(1, tableName);
+//            statement.setString(2, column1);
+//            statement.setString(3, column2);
+//            statement.setString(4, column3);
+//            statement.setString(5, column4);
+//            statement.setDouble(6, corr12);
+//            statement.setDouble(7, corr13);
+//            statement.setDouble(8, corr14);
+//            statement.setDouble(9, corr23);
+//            statement.setDouble(10, corr24);
+//            statement.setDouble(11, corr34);
+//            statement.executeUpdate();
+//        }
+//    }
+
 }
