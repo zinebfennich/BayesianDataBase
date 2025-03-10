@@ -143,6 +143,18 @@ public class ColumUtils {
         }
     }
 
+    public static boolean columnIsNumeric(Connection connection, String nomtable, String columnName) throws SQLException {
+        DatabaseMetaData metaData = connection.getMetaData();
+
+        // Vérifier si une colonne _num existe
+        String numericColumnName = columnName + "_num";
+        try (ResultSet columns = metaData.getColumns(null, null, nomtable, numericColumnName)) {
+            if (columns.next()) {
+                return false; // donc la colonne originale est textuelle
+            }
+        }
+        return true; // Aucune colonne _num n'existe donc c'est numérique
+    }
 
 
 

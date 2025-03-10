@@ -1,5 +1,7 @@
 package database;
 
+import utils.PCAlgorithmUtils;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -107,114 +109,37 @@ public class DatabaseUtils {
         statement.setString(2, column1);
         statement.setString(3, column2);
         statement.setString(4, column3);
-        statement.setInt(5, calculatePearson3variables(connection,tableName,column1,column2,column3));
-        statement.setInt(6, calculatePearson3variables(connection,tableName,column1,column3,column2));
-        statement.setInt(7, calculatePearson3variables(connection,tableName,column2,column3,column1));
-        statement.executeUpdate();
-    }
-
-
-    /**
-     * Fonction qui calcule la corrélation partielle avec la formule de Pearson pour les variables continues.
-     * @param connection
-     * @param table
-     * @param column1
-     * @param column2
-     * @param column3
-     * @return
-     * @throws SQLException
-     */
-    private static int calculatePearson3variables(Connection connection,String table, String column1, String column2, String column3) throws SQLException {
-        // Étape 1: Récupérer les données des trois colonnes
-        double[][] values = fetchDataFromDatabase(connection, column1, column2, column3, table);
-        double[] x = values[0];
-        double[] y = values[1];
-        double[] z = values[2];
-
-        // Étape 2: Calculer les corrélations entre les paires de variables
-        double r_xy = pearsonCorrelation(x, y); // Corrélation entre column1 et column2
-        double r_xz = pearsonCorrelation(x, z); // Corrélation entre column1 et column3
-        double r_yz = pearsonCorrelation(y, z); // Corrélation entre column2 et column3
-
-        // Étape 3: Calculer la corrélation partielle
-        return calculatePartialCorrelation(r_xy, r_xz, r_yz);
-    }
-
-
-    /**
-     * Méthode pour récupérer les données des colonnes entrées en paramètres depuis une table de la base de données.
-     * @param connection
-     * @param column1
-     * @param column2
-     * @param column3
-     * @param table_name
-     * @return
-     * @throws SQLException
-     */
-    private static double[][] fetchDataFromDatabase(Connection connection, String column1, String column2, String column3, String table_name) throws SQLException {
-        // Liste des tables autorisées protection contre les injections SQL
-        List<String> allowedTables = Arrays.asList("aka_name", "title_akas", "title_basics","title_crew","title_episode",
-                "title_principals","title_ratings");
-
-        // Vérification du nom de la table
-        if (!allowedTables.contains(table_name)) {
-            throw new IllegalArgumentException("Ce nom de table n'appartient pas aux tables IMDB");
+        if (ColumUtils.columnIsNumeric(connection,tableName,column1) || ColumUtils.columnIsNumeric(connection,tableName,column2) || ColumUtils.columnIsNumeric(connection,tableName,column3)) {
+            statement.setInt(5, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column1,column2,column3));
+            statement.setInt(6, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column1,column3,column2));
+            statement.setInt(7, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column2,column3,column1));
+        }else{
+            //insert khi2
         }
 
-        // Construire dynamiquement la requête SQL
-        String query = "SELECT " + column1 + ", " + column2 + ", " + column3 + " FROM " + table_name;
 
-        Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery(query);
+        //si discrètes khi 2
+//        // **Ajoute la condition ici** pour ignorer `id`
+//        if (!colonne1.equals("id") && !colonne2.equals("id") && !colonne3.equals("id")) {
+//            boolean isIndependent = false;
+//            try {
+//                isIndependent = PCAlgorithmUtils.performChiSquaredTestForThreeVariables(
+//                        connection, tableName, colonne1, colonne2, colonne3);
+//            } catch (SQLException e) {
+//                e.printStackTrace();
+//            }
 
-        List<Double> values1 = new ArrayList<>();
-        List<Double> values2 = new ArrayList<>();
-        List<Double> values3 = new ArrayList<>();
-
-        while (rs.next()) {
-            values1.add(rs.getDouble(column1));
-            values2.add(rs.getDouble(column2));
-            values3.add(rs.getDouble(column3));
-        }
-
-        // Convertir les listes en arrays pour faciliter les calculs
-        double[] x = values1.stream().mapToDouble(d -> d).toArray();
-        double[] y = values2.stream().mapToDouble(d -> d).toArray();
-        double[] z = values3.stream().mapToDouble(d -> d).toArray();
-
-        return new double[][] {x, y, z};
+            statement.executeUpdate();
     }
 
 
-    /**
-     * Méthode pour calculer la corrélation de Pearson entre deux tableaux de valeurs.
-     * @param x
-     * @param y
-     * @return
-     */
-    private static double pearsonCorrelation(double[] x, double[] y) {
-        int n = x.length;
-        double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
 
-        for (int i = 0; i < n; i++) {
-            sumX += x[i];
-            sumY += y[i];
-            sumXY += x[i] * y[i];
-            sumX2 += x[i] * x[i];
-            sumY2 += y[i] * y[i];
-        }
 
-        double numerator = (n * sumXY) - (sumX * sumY);
-        double denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
 
-        return numerator / denominator;
-    }
 
-    // Méthode pour calculer la corrélation partielle
-    private static int calculatePartialCorrelation(double r_xy, double r_xz, double r_yz) {
-        double corrPartielle = (r_xy - r_xz * r_yz) / Math.sqrt((1 - r_xz * r_xz) * (1 - r_yz * r_yz));
-        return (int)(corrPartielle * 1000); // Multiplier par 1000 pour éviter la perte de précision
-    }
+
+
+
 
 
 

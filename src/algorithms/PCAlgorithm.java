@@ -24,7 +24,8 @@ public class PCAlgorithm {
         //3) supprimer les liens entre les noeuds de t_edges si la correlation < seuil ou correlation_exists = false
         removeT_edgesCorrelationEdges(connection);
         //4) calculer les INDEPENDANCE CONDITIONNELLE D'ORDRE 1 (A et B | C)
-        //si variables continues -> Pearson sinon khi2
+        //il faut choisir ici d'utiliser Pearson ou khi2
+        //il faut modifier testcall3 pour choisir quel test utiliser
         calculatePartialCorrelations(connection);
         //5) enlever les liens entre les variables qui sont correlées mais deviennent non correlés dans t_edges_ci1
         removeConditionallyIndependentEdges(connection);
