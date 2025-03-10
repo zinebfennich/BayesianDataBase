@@ -1,6 +1,8 @@
 package database;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Cette classe est dédiée à des opérations sur les colonnes des tables.
@@ -143,9 +145,16 @@ public class ColumUtils {
         }
     }
 
+    /**
+     * retourne true si la colonne est initialement numérique, false sinon.
+     * @param connection
+     * @param nomtable
+     * @param columnName
+     * @return
+     * @throws SQLException
+     */
     public static boolean columnIsNumeric(Connection connection, String nomtable, String columnName) throws SQLException {
         DatabaseMetaData metaData = connection.getMetaData();
-
         // Vérifier si une colonne _num existe
         String numericColumnName = columnName + "_num";
         try (ResultSet columns = metaData.getColumns(null, null, nomtable, numericColumnName)) {
@@ -155,6 +164,32 @@ public class ColumUtils {
         }
         return true; // Aucune colonne _num n'existe donc c'est numérique
     }
+
+    /**
+     * retourne toutes les variables possibles d'une table à part une paire une paire de variables.
+     * @param connection
+     * @param tableName
+     * @param node1
+     * @param node2
+     * @return
+     * @throws SQLException
+     */
+    public static List<String> getColumnsExceptTextAndPair(Connection connection, String tableName, String node1, String node2) throws SQLException {
+        List<String> columns = new ArrayList<>();
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "'")) {
+
+            while (resultSet.next()) {
+                String columnName = resultSet.getString("column_name");
+                if (!columnName.equals(node1) && !columnName.equals(node2) && columnIsNumeric(connection, tableName, columnName)) {
+                    columns.add(columnName);
+                }
+            }
+        }
+        return columns;
+    }
+
+
 
 
 

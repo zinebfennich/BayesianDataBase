@@ -100,21 +100,20 @@ public class DatabaseUtils {
      * @param column3    Nom de la troisième colonne
      * @throws SQLException Si une erreur SQL survient
      */
-    public static void testcall3(Connection connection, String tableName, String column1, String column2,
+    public static void testcall2(Connection connection, String tableName, String column1, String column2,
                                  String column3) throws SQLException {
 
-        String sql = "INSERT INTO T_edges_ci1 (sname, node1, node2, node3,corr12,corr13,corr23) VALUES (?, ?, ?, ?,?,?,?)";
+        String sql = "INSERT INTO T_edges_2 (sname, node1, node2, node3,corr_part) VALUES (?, ?, ?, ?,?)";
         CallableStatement statement = connection.prepareCall(sql);
         statement.setString(1, tableName);
         statement.setString(2, column1);
         statement.setString(3, column2);
         statement.setString(4, column3);
-        if (ColumUtils.columnIsNumeric(connection,tableName,column1) || ColumUtils.columnIsNumeric(connection,tableName,column2) || ColumUtils.columnIsNumeric(connection,tableName,column3)) {
+        if (!ColumUtils.columnIsNumeric(connection,tableName,column1) || (!ColumUtils.columnIsNumeric(connection,tableName,column2)) || (!ColumUtils.columnIsNumeric(connection,tableName,column3))) {
             statement.setInt(5, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column1,column2,column3));
-            statement.setInt(6, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column1,column3,column2));
-            statement.setInt(7, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column2,column3,column1));
         }else{
-            //insert khi2
+            statement.setInt(5, 0);
+
         }
 
 
@@ -130,7 +129,11 @@ public class DatabaseUtils {
 //            }
 
             statement.executeUpdate();
+        //update falgt_edges2
     }
+
+    //ajouter une fonction pour mettre le flag à true si corr_part<30
+    //update falgt_edges2
 
 
 

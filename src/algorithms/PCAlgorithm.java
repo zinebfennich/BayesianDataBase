@@ -1,12 +1,16 @@
 package algorithms;
 
+import database.ColumUtils;
 import database.DatabaseUtils;
 import structures.*;
 import utils.Combiner;
 import utils.PCAlgorithmUtils;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
 
 /**
  * Contient l'implémentation de l'algorithme PC pour la découverte causale.
@@ -27,7 +31,7 @@ public class PCAlgorithm {
         //il faut choisir ici d'utiliser Pearson ou khi2
         //il faut modifier testcall3 pour choisir quel test utiliser
         calculatePartialCorrelations(connection);
-        //5) enlever les liens entre les variables qui sont correlées mais deviennent non correlés dans t_edges_ci1
+        //5) enlever les liens entre les variables qui sont correlées dans t_edges mais deviennent non correlés dans t_edges_ci1
         removeConditionallyIndependentEdges(connection);
     }
 
@@ -102,28 +106,35 @@ public class PCAlgorithm {
 
 
     /**
-     * Fonction qui génére tous les triplets de noeuds possibles à partir des variables de la table. Elle enlève les
-     * doublons car a et b | c c'est la même chose que b et a | c.
+     * Fonction qui génére tous les triplets de noeuds à partir de t_edges, calcule la corrélation partielle et l'insère dans t_edges_2.
      * @param connection
      */
     private void calculatePartialCorrelations(Connection connection) {
-        Node[] nodesTab = getGraphNodesArray();
-        Combiner<Node> combinerTriplets = new Combiner<>(3, nodesTab);
-        Node[] triplet = new Node[3];
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT node1, node2 FROM t_edges WHERE correlation_exists = true")) {
 
-        while (combinerTriplets.searchNext(triplet)) {
-            //appeler la fonction qui va calculer les corr partielles entre les noeuds et insérer le
-            //résultat dans t_edges ci1
-            //pour le moment j'utilise que Pearson
-            //si g bien compris il faut check au début si les var sont continues ou discrètes
-            try{
-                DatabaseUtils.testcall3(connection, tableName, triplet[0].getName(), triplet[1].getName(),triplet[2].getName());
-            } catch (SQLException e) {
-                throw new RuntimeException("Erreur lors de l'insertion de données dans t_edges_ci1.", e);
+            while (resultSet.next()) {
+                String node1 = resultSet.getString("node1");
+                String node2 = resultSet.getString("node2");
+
+                // Récupérer les colonnes de la table sauf les colonnes text et les colonnes de la paire de variables
+                List<String> columns = ColumUtils.getColumnsExceptTextAndPair(connection, tableName, node1, node2);
+
+                for (String node3 : columns) {
+                    // Insérer les résultats dans t_edges_2
+                    try {
+                        DatabaseUtils.testcall2(connection, tableName, node1, node2, node3);
+                    } catch (SQLException e) {
+                        throw new RuntimeException("Erreur lors de l'insertion des triplets de noeuds dans t_edges_2.", e);
+                    }
+                }
             }
-
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
+
+
 
     private void removeConditionallyIndependentEdges(Connection connection) {
         try (var statement = connection.createStatement();
