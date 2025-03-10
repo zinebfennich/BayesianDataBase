@@ -87,11 +87,8 @@ public class DatabaseUtils {
         }
     }
 
-
-
-
     /**
-     * Insère des données dans la table T_edges_ci1.
+     * Insère des données dans la table T_edges_2 en utilisant Khi² ou la corrélation partielle selon les types de variables.
      *
      * @param connection Connexion à la base de données
      * @param tableName  Nom de la table source
@@ -100,6 +97,67 @@ public class DatabaseUtils {
      * @param column3    Nom de la troisième colonne
      * @throws SQLException Si une erreur SQL survient
      */
+    public static void testcall2(Connection connection, String tableName, String column1, String column2, String column3) throws SQLException {
+        String sql = "INSERT INTO T_edges_2 (sname, node1, node2, node3, corr_part) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, tableName);
+            statement.setString(2, column1);
+            statement.setString(3, column2);
+            statement.setString(4, column3);
+
+            double corrValue = 0; // Valeur par défaut
+
+            // Vérifier si les colonnes sont hachées ou numériques
+            boolean isHashed1 = !ColumUtils.columnIsNumeric(connection, tableName, column1);
+            boolean isHashed2 = !ColumUtils.columnIsNumeric(connection, tableName, column2);
+            boolean isHashed3 = !ColumUtils.columnIsNumeric(connection, tableName, column3);
+
+            boolean isNumeric1 = ColumUtils.columnIsNumeric(connection, tableName, column1);
+            boolean isNumeric2 = ColumUtils.columnIsNumeric(connection, tableName, column2);
+            boolean isNumeric3 = ColumUtils.columnIsNumeric(connection, tableName, column3);
+
+            // 🔹 Cas 1 : Si au moins une variable est hachée, utiliser Corrélation Partielle (CorrPart)
+            if (isHashed1 || isHashed2 || isHashed3) {
+                corrValue = PCAlgorithmUtils.calculatePearson3variables(connection, tableName, column1, column2, column3);
+            }
+            // 🔹 Cas 2 : Si toutes les variables sont numériques, utiliser Khi² après binning
+            else if (isNumeric1 && isNumeric2 && isNumeric3) {
+                // Discrétisation des variables en plages de valeurs (binning)
+                String binnedColumn1 = ColumUtils.createBinnedColumn(connection, tableName, column1);
+                String binnedColumn2 = ColumUtils.createBinnedColumn(connection, tableName, column2);
+                String binnedColumn3 = ColumUtils.createBinnedColumn(connection, tableName, column3);
+
+                // Exécuter le test du Khi² sur les colonnes discrétisées
+                corrValue = PCAlgorithmUtils.performChiSquaredTestForThreeVariables(connection, tableName, binnedColumn1, binnedColumn2, binnedColumn3);
+            }
+
+            // Insérer la valeur de corrélation calculée
+            statement.setDouble(5, corrValue);
+            statement.executeUpdate();
+
+            // Mettre à jour le flag si `corr_part < 30`
+            updateFlagTEdges2(connection, tableName, column1, column2, column3, corrValue);
+        }
+    }
+
+    /**
+     * Met à jour le flag `correlation_exists` dans `T_edges_2` si `corr_part < 30`.
+     */
+    private static void updateFlagTEdges2(Connection connection, String tableName, String col1, String col2, String col3, double corrValue) throws SQLException {
+        String sql = "UPDATE T_edges_2 SET correlation_exists = ? WHERE sname = ? AND node1 = ? AND node2 = ? AND node3 = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setBoolean(1, corrValue < 30); // True si inférieur à 30%
+            statement.setString(2, tableName);
+            statement.setString(3, col1);
+            statement.setString(4, col2);
+            statement.setString(5, col3);
+            statement.executeUpdate();
+        }
+    }
+
+
+
+
     public static void testcall3(Connection connection, String tableName, String column1, String column2,
                                  String column3) throws SQLException {
 
@@ -109,12 +167,19 @@ public class DatabaseUtils {
         statement.setString(2, column1);
         statement.setString(3, column2);
         statement.setString(4, column3);
-        if (ColumUtils.columnIsNumeric(connection,tableName,column1) || ColumUtils.columnIsNumeric(connection,tableName,column2) || ColumUtils.columnIsNumeric(connection,tableName,column3)) {
+        if (!ColumUtils.columnIsNumeric(connection,tableName,column1) || !ColumUtils.columnIsNumeric(connection,tableName,column2) || !ColumUtils.columnIsNumeric(connection,tableName,column3)) {
             statement.setInt(5, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column1,column2,column3));
             statement.setInt(6, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column1,column3,column2));
             statement.setInt(7, PCAlgorithmUtils.calculatePearson3variables(connection,tableName,column2,column3,column1));
         }else{
-            //insert khi2
+            float chiSquaredValue = PCAlgorithmUtils.performChiSquaredTestForThreeVariables(connection, "my_table", "col1", "col2", "col3");
+
+            if (chiSquaredValue < 5.991) {
+                System.out.println("Les variables sont indépendantes sous col3 (Khi² = " + chiSquaredValue + ")");
+            } else {
+                System.out.println("Les variables sont corrélées sous col3 (Khi² = " + chiSquaredValue + ")");
+            }
+
         }
 
 

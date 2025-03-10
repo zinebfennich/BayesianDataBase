@@ -1,6 +1,8 @@
 package database;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Cette classe est dédiée à des opérations sur les colonnes des tables.
@@ -155,7 +157,68 @@ public class ColumUtils {
         }
         return true; // Aucune colonne _num n'existe donc c'est numérique
     }
+    /**
+     * Crée une nouvelle colonne binned (plages) pour une variable numérique.
+     *
+     * @param connection Connexion à la base de données
+     * @param tableName  Nom de la table
+     * @param columnName Nom de la colonne à discrétiser
+     * @return Nom de la colonne transformée (`column_binned`)
+     * @throws SQLException Si une erreur SQL survient
+     */
+    public static String createBinnedColumn(Connection connection, String tableName, String columnName) throws SQLException {
+        String binnedColumnName = columnName + "_binned";
 
+        // Vérifier si la colonne existe déjà pour éviter de la recréer
+        if (!columnExists(connection, tableName, binnedColumnName)) {
+            addColumn(connection, tableName, binnedColumnName, "TEXT");
+
+            // Déterminer les seuils de binning automatiquement (quartiles)
+            List<Double> thresholds = calculateBinningThresholds(connection, tableName, columnName);
+
+            // Appliquer les seuils pour catégoriser les valeurs
+            String updateSQL = "UPDATE " + tableName + " SET " + binnedColumnName + " = " +
+                    "CASE " +
+                    "WHEN " + columnName + " < ? THEN 'Faible' " +
+                    "WHEN " + columnName + " BETWEEN ? AND ? THEN 'Moyen' " +
+                    "ELSE 'Élevé' END";
+
+            try (PreparedStatement statement = connection.prepareStatement(updateSQL)) {
+                statement.setDouble(1, thresholds.get(0)); // 1er quartile
+                statement.setDouble(2, thresholds.get(0)); // 1er quartile
+                statement.setDouble(3, thresholds.get(1)); // 3e quartile
+                statement.executeUpdate();
+            }
+        }
+
+        return binnedColumnName;
+    }
+
+    /**
+     * Calcule les seuils pour faire du binning sur une colonne numérique.
+     * Utilise les quartiles (Q1 et Q3) pour discrétiser en 3 groupes.
+     *
+     * @param connection Connexion à la base de données
+     * @param tableName  Nom de la table
+     * @param columnName Nom de la colonne à analyser
+     * @return Liste contenant [Q1, Q3] comme seuils
+     * @throws SQLException Si une erreur SQL survient
+     */
+    private static List<Double> calculateBinningThresholds(Connection connection, String tableName, String columnName) throws SQLException {
+        String sql = "SELECT percentile_cont(0.25) WITHIN GROUP (ORDER BY " + columnName + ") AS Q1, " +
+                "percentile_cont(0.75) WITHIN GROUP (ORDER BY " + columnName + ") AS Q3 " +
+                "FROM " + tableName;
+
+        List<Double> thresholds = new ArrayList<>();
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
+            if (resultSet.next()) {
+                thresholds.add(resultSet.getDouble("Q1"));
+                thresholds.add(resultSet.getDouble("Q3"));
+            }
+        }
+        return thresholds;
+    }
 
 
 }
