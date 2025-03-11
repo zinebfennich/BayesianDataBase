@@ -205,6 +205,33 @@ public class ColumUtils {
     }
 
     /**
+     * retourne toutes les variables possibles d'une table à part une paire une
+     * paire de variables.
+     *
+     * @param connection
+     * @param tableName
+     * @param node1
+     * @param node2
+     * @return
+     * @throws SQLException
+     */
+    public static List<String> getColumnsExceptTextAndPair(Connection connection, String tableName, String node1,
+                                                           String node2) throws SQLException {
+        List<String> columns = new ArrayList<>();
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(
+                     "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "'")) {
+            while (resultSet.next()) {
+                String columnName = resultSet.getString("column_name");
+                if (!columnName.equals(node1) && !columnName.equals(node2)
+                        && columnIsNumeric(connection, tableName, columnName)) {
+                    columns.add(columnName);
+                }
+            }
+        }
+        return columns;
+    }
+    /**
      * Crée une nouvelle colonne binned (plages) pour une variable numérique.
      *
      * @param connection Connexion à la base de données

@@ -1,31 +1,22 @@
 package structures;
-
 import database.*;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-
-
-
 public class Graph {
     //NB: si on peut avoir un réseau bayésien avec des variables de plusieurs tables envisager de changer peut-etre
     //la liste en map <Node, table>
     private List<Node> nodes;
-
     public Graph() {
         nodes = new ArrayList<Node>();
     }
-
     public void addNode(Node node) {
         nodes.add(node);
     }
-
     public List<Node> getNodes() {
         return nodes;
     }
-
     /**
      * Ajoute les noms des colonnes de type INTEGER d'une table(les variables) à l'objet Graph sous forme de Nodes.
      * @param connection Connexion à la base de données
@@ -41,7 +32,6 @@ public class Graph {
             }
         }
     }
-
     /**
      * pour chaque noeud dans nodes, on crée un lien entre ce noeud et tous les autres noeuds
      */
@@ -55,7 +45,6 @@ public class Graph {
             }
         }
     }
-
     public Node getNodeByName(String name) {
         for (Node node : nodes) {
             if (node.getName().equals(name)) {
@@ -64,7 +53,6 @@ public class Graph {
         }
         return null;
     }
-
     public void removeEdge(String node1Name, String node2Name) {
         Node node1 = getNodeByName(node1Name);
         Node node2 = getNodeByName(node2Name);
@@ -73,5 +61,9 @@ public class Graph {
             node2.removeLink(node1);
         }
     }
-
+    public Node[] getGraphNodesArray() {
+        Node[] nodesTab = new Node[getNodes().size()];
+        getNodes().toArray(nodesTab);
+        return nodesTab;
+    }
 }
