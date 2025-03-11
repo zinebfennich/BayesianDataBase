@@ -1,14 +1,9 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-
-import database.DatabaseUtils;
+import algorithms.PCAlgorithm;
 import database.ColumUtils;
-import structures.Graph;
-import structures.Node;
-import utils.Combiner;
+import database.DatabaseUtils;
 
 public class Main {
     public static void main(String[] args) {
@@ -16,8 +11,14 @@ public class Main {
         String user = "postgres";
         String password = "psqlpass";
         String tableName = "aka_name"; // Nom de la table à tester
-
-
-
+        // Établir la connexion à la base de données
+        try (Connection connection = DriverManager.getConnection(url, user, password)) {
+            PCAlgorithm pcAlgorithm = new PCAlgorithm(tableName);
+            DatabaseUtils.alterTableAddNumFields(connection, tableName);
+            String[] columns = ColumUtils.getColumnNames1(connection, tableName);
+            pcAlgorithm.discoverCausalStructure(connection, columns);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }

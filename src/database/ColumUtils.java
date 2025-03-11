@@ -175,34 +175,7 @@ public class ColumUtils {
         return true; // Aucune colonne _num n'existe donc c'est numérique
     }
 
-    /**
-     * retourne toutes les variables possibles d'une table à part une paire une
-     * paire de variables.
-     * 
-     * @param connection
-     * @param tableName
-     * @param node1
-     * @param node2
-     * @return
-     * @throws SQLException
-     */
-    public static List<String> getColumnsExceptTextAndPair(Connection connection, String tableName, String node1,
-            String node2) throws SQLException {
-        List<String> columns = new ArrayList<>();
-        try (Statement statement = connection.createStatement();
-                ResultSet resultSet = statement.executeQuery(
-                        "SELECT column_name FROM information_schema.columns WHERE table_name = '" + tableName + "'")) {
 
-            while (resultSet.next()) {
-                String columnName = resultSet.getString("column_name");
-                if (!columnName.equals(node1) && !columnName.equals(node2)
-                        && columnIsNumeric(connection, tableName, columnName)) {
-                    columns.add(columnName);
-                }
-            }
-        }
-        return columns;
-    }
 
     /**
      * retourne toutes les variables possibles d'une table à part une paire une
