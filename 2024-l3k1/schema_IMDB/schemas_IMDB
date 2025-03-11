@@ -1,0 +1,279 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 16.1
+-- Dumped by pg_dump version 16.1
+
+-- Started on 2025-02-16 20:07:42
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- TOC entry 215 (class 1259 OID 16581)
+-- Name: name_basics; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.name_basics (
+    nconst character varying(10),
+    primaryname text,
+    birthyear smallint,
+    deathyear smallint,
+    primaryprofession text,
+    knownfortitles text
+);
+
+
+ALTER TABLE public.name_basics OWNER TO postgres;
+
+--
+-- TOC entry 223 (class 1259 OID 16716)
+-- Name: t_edges; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.t_edges (
+    id integer NOT NULL,
+    sname text NOT NULL,
+    node1 text NOT NULL,
+    node2 text NOT NULL,
+    corr integer NOT NULL
+);
+
+
+ALTER TABLE public.t_edges OWNER TO postgres;
+
+--
+-- TOC entry 226 (class 1259 OID 16731)
+-- Name: t_edges_ci1; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.t_edges_ci1 (
+    sname text,
+    node1 text,
+    node2 text,
+    node3 text,
+    corr12 integer,
+    corr13 integer,
+    corr23 integer
+);
+
+
+ALTER TABLE public.t_edges_ci1 OWNER TO postgres;
+
+--
+-- TOC entry 222 (class 1259 OID 16715)
+-- Name: t_edges_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.t_edges_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.t_edges_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4816 (class 0 OID 0)
+-- Dependencies: 222
+-- Name: t_edges_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.t_edges_id_seq OWNED BY public.t_edges.id;
+
+
+--
+-- TOC entry 225 (class 1259 OID 16725)
+-- Name: test_table; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.test_table (
+    id integer NOT NULL,
+    value1 integer,
+    value2 integer,
+    value3 integer
+);
+
+
+ALTER TABLE public.test_table OWNER TO postgres;
+
+--
+-- TOC entry 224 (class 1259 OID 16724)
+-- Name: test_table_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.test_table_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.test_table_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4817 (class 0 OID 0)
+-- Dependencies: 224
+-- Name: test_table_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.test_table_id_seq OWNED BY public.test_table.id;
+
+
+--
+-- TOC entry 216 (class 1259 OID 16586)
+-- Name: title_akas; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.title_akas (
+    titleid text,
+    ordering integer,
+    title text,
+    region text,
+    language text,
+    types text,
+    attributes text,
+    isoriginaltitle boolean
+);
+
+
+ALTER TABLE public.title_akas OWNER TO postgres;
+
+--
+-- TOC entry 217 (class 1259 OID 16591)
+-- Name: title_basics; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.title_basics (
+    tconst text,
+    titletype text,
+    primarytitle text,
+    originaltitle text,
+    isadult boolean,
+    startyear smallint,
+    endyear smallint,
+    runtimeminutes integer,
+    genres text
+);
+
+
+ALTER TABLE public.title_basics OWNER TO postgres;
+
+--
+-- TOC entry 218 (class 1259 OID 16596)
+-- Name: title_crew; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.title_crew (
+    tconst text,
+    directors text,
+    writers text
+);
+
+
+ALTER TABLE public.title_crew OWNER TO postgres;
+
+--
+-- TOC entry 219 (class 1259 OID 16601)
+-- Name: title_episode; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.title_episode (
+    const text,
+    parenttconst text,
+    seasonnumber text,
+    episodenumber text
+);
+
+
+ALTER TABLE public.title_episode OWNER TO postgres;
+
+--
+-- TOC entry 220 (class 1259 OID 16606)
+-- Name: title_principals; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.title_principals (
+    tconst text,
+    ordering integer,
+    nconst text,
+    category text,
+    job text,
+    characters text
+);
+
+
+ALTER TABLE public.title_principals OWNER TO postgres;
+
+--
+-- TOC entry 221 (class 1259 OID 16710)
+-- Name: title_ratings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.title_ratings (
+    tconst character varying(10),
+    average_rating numeric,
+    num_votes integer
+);
+
+
+ALTER TABLE public.title_ratings OWNER TO postgres;
+
+--
+-- TOC entry 4662 (class 2604 OID 16719)
+-- Name: t_edges id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.t_edges ALTER COLUMN id SET DEFAULT nextval('public.t_edges_id_seq'::regclass);
+
+
+--
+-- TOC entry 4663 (class 2604 OID 16728)
+-- Name: test_table id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.test_table ALTER COLUMN id SET DEFAULT nextval('public.test_table_id_seq'::regclass);
+
+
+--
+-- TOC entry 4665 (class 2606 OID 16723)
+-- Name: t_edges t_edges_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.t_edges
+    ADD CONSTRAINT t_edges_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4667 (class 2606 OID 16730)
+-- Name: test_table test_table_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.test_table
+    ADD CONSTRAINT test_table_pkey PRIMARY KEY (id);
+
+
+-- Completed on 2025-02-16 20:07:43
+
+--
+-- PostgreSQL database dump complete
+--
+
