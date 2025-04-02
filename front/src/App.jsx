@@ -1,44 +1,41 @@
-import { useEffect, useState } from 'react'
-import Axios from 'axios'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { links } from './constants'
+
+import Home from "./pages/Home/Home"
+import NoPage from "./pages/NoPage"
+
+import Layout from './components/Layout/Layout'
 
 
-import './App.css'
-
-
-function App() {
-    const fetchTables = () => {
-        Axios.get('http://localhost:3000/api/tables').then((res) => {
-            setTables(res.data)
-        })
-    }
-
-    const getTable = () => {
-        var a = document.getElementById("table-id")
-    }
-
-    const [tables, setTables] = useState([])
-
-    useEffect(() => {
-        fetchTables()
-    }, [])
-
+function App() { 
+    console.log(links.dashboard)
+    
   return (
     <>
-      <div className='container'>
-            <h1>React + Express + PostgreSQL</h1>
-            
-            <div className='items'>
-                <select name="table" id="table-id" defaultValue="default">
-                    <option value="default" disabled="disabled">Please select a table</option>
-                    {
-                        tables.map((table, index) => {
-                            return(<option key={index+1} value={table.tablename}>{table.tablename}</option>)
-                        })
-                    }
-                </select>
-                <button className='btn' onClick={() => {getTable()}}>submit</button>
-            </div>
-      </div>
+      <Router>
+        <Routes>
+            {/* Home page */}
+            <Route index element={<Home/>}/>
+
+            {/* App = /dashboard */}
+            <Route element={<Layout/>}>
+                {Object.values(links)
+                .filter((element) => element.where === 'app')
+                .map((element, id) => (
+                    <Route
+                        caseSensitive
+                        key={id}
+                        path={element.path}
+                        element={typeof element.page !== 'undefined' ? element.page : <NoPage />}
+                    />
+                ))
+            }
+            </Route>
+        
+            {/* Default page */}
+            <Route path='*' element={<NoPage/>}/>
+        </Routes>
+      </Router>
     </>
   )
 }

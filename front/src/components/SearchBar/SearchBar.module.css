@@ -1,0 +1,36 @@
+.searchbar{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.searchbar_input{
+    /* reset */
+    border:none;
+    background-image:none;
+    background-color:transparent;
+    box-shadow: none;
+
+    color: var(--clr-text);
+    border-bottom: 1px solid var(--clr-text);
+    padding: 0.25em;
+}
+
+.searchbar_input:focus{
+    border-bottom-color: var(--clr-violet);
+
+    transition: 0.5s;
+}
+
+.searchbar_btn{
+    background-color: var(--clr-slate400);
+    border-radius: 50%;
+    padding: 0.5rem;
+}
+
+
+.searchbar_btn_icon{
+    fill: var(--clr-white);
+    width: var(--size-xl);
+    height: auto;
+}

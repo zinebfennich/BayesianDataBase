@@ -1,9 +1,17 @@
 .items{
     display: flex;
-    justify-content: center;
     align-items: center;
-    flex-direction: column;
+
     gap: 1rem;
 
     margin-top: 2rem;
+}   
+
+.select{
+    padding: 0.3em 0.5em;
 }
+
+.result{
+    margin-top: 5rem;
+}
+

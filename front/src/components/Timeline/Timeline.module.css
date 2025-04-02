@@ -1,0 +1,42 @@
+
+
+.element{
+    width: fit-content;
+    position: relative;
+}
+
+
+.element__progress{
+    height: 0;
+    width: 2rem;
+
+    background-color: var(--clr-offwhite);
+
+    position: absolute;
+    bottom: 0rem;
+
+    transition: height 1.5s;
+}
+
+.element__date{
+    font-size: var(--size-lg);
+    font-weight: 500;
+
+    position: absolute;
+    top: 0.25rem;
+    left: -0.255rem;
+}
+
+
+.element__last::before{
+    content: "current...";
+    font-size: var(--size-lg);
+
+    position: absolute;
+    top: -3rem;
+    left: -0.75rem;
+}
+
+.expend{
+    height: var(--progress-height);
+}
