@@ -9,14 +9,11 @@ function App() {
     const fetchTables = () => {
         Axios.get('http://localhost:3000/api/tables').then((res) => {
             setTables(res.data)
-            console.log(res.data)
         })
     }
 
     const getTable = () => {
         var a = document.getElementById("table-id")
-
-        console.log(a.value)
     }
 
     const [tables, setTables] = useState([])
