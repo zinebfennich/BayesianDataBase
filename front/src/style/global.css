@@ -1,0 +1,129 @@
+:root{
+    /* font */
+    --font-primary: "Roboto", sans-serif;
+    --font-secondary: "Source Code Pro", monospace;;
+
+    /* colors */
+    --clr-primary: #161b2d;
+    --clr-secondary: #3C4858;
+    --clr-green: #288c6c;
+    --clr-orange: #f5700c;
+
+    --clr-purple: #b066ff;
+    
+    --clr-red: #d22824;
+    --clr-rose: #e11d48;
+
+    --clr-lighter-blue: #25304a;
+    --clr-darker-blue: #161C2F;
+
+    --clr-slate900: oklch(0.208 0.042 265.755);
+    --clr-slate800: oklch(0.279 0.041 260.031);
+    --clr-slate700: oklch(0.372 0.044 257.287);
+    --clr-slate600: oklch(0.446 0.043 257.281);
+    --clr-slate500: oklch(0.554 0.046 257.417);
+    --clr-slate400: oklch(0.704 0.04 256.788);
+    --clr-slate200: oklch(0.929 0.013 255.508);
+    --clr-slate100: oklch(0.968 0.007 247.896);
+
+    --clr-shadow: 0 16px 38px -12px rgba(37, 48, 74, 0.56),  0 4px 25px 0px rgba(37, 48, 74, 0.12),  0 8px 10px -5px rgba(37, 48, 74, 0.2);
+    
+    --clr-text: #a9afbbd1;
+    --clr-link: #0000FF;
+
+    --clr-offwhite: #F2F0EF;
+    --clr-white: #ffffff;
+    --clr-black: #000000;
+
+    /* size */
+    --size-xxs: 0.5rem;
+    --size-xs: 0.75rem;
+    --size-sm: 0.875rem;
+    --size-base: 1rem;
+    --size-lg: 1.125rem;
+    --size-xl: 1.25rem;
+    --size-2xl: 1.5rem;
+    --size-3xl: 1.875rem;
+    --size-4xl: 2.25rem;
+    --size-5xl: 3rem;
+    --size-6xl: 3.75rem;
+    --size-7xl: 4.5rem;
+    --size-8xl: 6rem;
+    --size-9xl: 8rem;
+    --size-10xl: 10rem;
+}
+
+
+*{
+    margin: 0;
+    padding: 0;
+    line-height: calc(1em + 0.5rem);
+}
+
+html{
+    scroll-behavior: smooth;
+}
+
+body{
+    font-family: var(--font-primary);
+    background-color: var(--clr-primary);
+    color: var(--clr-text);
+    min-height: 100vh
+}
+
+img,
+picture,
+video,
+canvas,
+svg{
+    max-width: 100%;
+    display: block;
+    user-select: none;
+    pointer-events: none;
+}
+
+input,
+button,
+textarea,
+select{
+    font: inherit;
+}
+
+button{
+    display: inline-block;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6{
+    letter-spacing: -0.025em;
+    overflow-wrap: break-word;
+}
+
+p{
+	color: var(--clr-text);
+    overflow-wrap: break-word;
+}
+
+a{
+	color: var(--clr-link);
+    line-height: 1.75rem;
+}
+
+strong{
+	color: var(--clr-purple);
+    font-weight: 900;
+}
+
+button:focus-visible,
+a:focus-visible{
+    outline: solid ;
+}
